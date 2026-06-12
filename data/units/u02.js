@@ -698,5 +698,510 @@ int main() {
     ],
   },
 
-  // __MORE__
+  // ==========================================================================
+  'stl-stack-queue': {
+    id: 'stl-stack-queue',
+    objectives: [
+      'Use stack, queue, and deque APIs without the pop-returns-void surprise',
+      'Match brackets with a stack — the canonical LIFO pattern',
+      'Build min-heaps from priority_queue (which is a MAX-heap by default)',
+      'Choose priority_queue vs multiset based on the operations you need',
+    ],
+    theory: [
+      {
+        h: 'LIFO and FIFO in one breath',
+        md: '`stack` is last-in-first-out: `push`, read `top()`, `pop()`. `queue` is first-in-first-out: `push` at the back, read `front()`, `pop()` from the front. Every operation is O(1). The API trap that bites everyone once: **`pop()` returns void** — read the element first, *then* remove it.',
+        code: `stack<int> st;
+st.push(7);
+int x = st.top();   // read FIRST...
+st.pop();           // ...then remove (pop returns void!)
+
+queue<int> q;
+q.push(7);
+int y = q.front();  // same dance at the front
+q.pop();`,
+        note: '`int x = st.pop();` does not compile. Read with top()/front(), remove with pop() — two separate steps, always.',
+        noteKind: 'warn',
+      },
+      {
+        h: 'Bracket matching: the canonical stack',
+        md: 'Walk the string: push every opener; on a closer, the **most recent unmatched opener** must match it — exactly what the stack’s top holds. Fail fast on a closer with an empty stack; at the end, leftovers on the stack mean unclosed openers.',
+        code: `bool valid = true;
+stack<char> st;
+for (char c : s) {
+    if (c == '(') st.push(c);              // opener: remember it
+    else {
+        if (st.empty()) { valid = false; break; }  // closer, nothing open
+        st.pop();                          // matched the latest opener
+    }
+}
+if (!st.empty()) valid = false;            // unclosed openers remain`,
+      },
+      {
+        h: 'priority_queue: the heap',
+        md: '`priority_queue<int>` always serves its **largest** element: `top()` reads it, `pop()` removes it, `push()` inserts — push/pop are O(log n), top is O(1). Want the *smallest* first? The famously verbose min-heap incantation:',
+        code: `priority_queue<int> mx;                            // MAX-heap (default)
+priority_queue<int, vector<int>, greater<int>> mn; // MIN-heap
+
+mn.push(5); mn.push(1); mn.push(4);
+cout << mn.top();        // 1 — smallest first`,
+        note: 'Default = max-heap. Forgetting that — or typing the min-heap template wrong — is the classic “my Dijkstra explores the worst node first” bug.',
+        noteKind: 'warn',
+      },
+      {
+        h: 'Heaps of pairs',
+        md: 'A `priority_queue<pair<int,int>>` orders by `.first`, ties by `.second` — pair rules again. That makes “process items by priority while carrying a payload” one declaration: store `{key, id}`. With `greater<>` it becomes the (distance, node) min-heap at the heart of Dijkstra — coming in Unit 5.',
+        code: `priority_queue<pair<int,int>,
+               vector<pair<int,int>>,
+               greater<pair<int,int>>> pq;   // min by .first
+pq.push({dist, node});                       // smallest dist on top`,
+      },
+      {
+        h: 'deque — and pq vs multiset',
+        md: '`deque` gives O(1) `push_front/push_back/pop_front/pop_back` plus indexing — the structure for “take from either end.”\n\nChoosing a priority structure: `priority_queue` does push / top / pop, period — small and fast. `multiset` also gives min *and* max, `find`, and **erase of an arbitrary value** — more power, bigger constant. Need to delete things that aren’t the top? multiset (or lazy deletion).',
+        code: `deque<int> d = {2, 3};
+d.push_front(1);     // {1, 2, 3}
+d.pop_back();        // {1, 2}
+cout << d[1];        // 2 — random access works too`,
+      },
+    ],
+    exercises: [
+      {
+        id: 'sq-1', type: 'output', diff: 1,
+        prompt: 'What does this print?',
+        code: `int main() {
+    stack<int> st;
+    st.push(1); st.push(2); st.push(3);
+    st.pop();
+    cout << st.top() << " " << st.size() << "\\n";
+}`,
+        answer: '2 2',
+        explain: 'LIFO: pop removes the most recent push (3), exposing 2 at the top with two elements left. The last thing in is the first thing out.',
+      },
+      {
+        id: 'sq-2', type: 'output', diff: 1,
+        prompt: 'Same moves, different container. Output?',
+        code: `int main() {
+    queue<int> q;
+    q.push(1); q.push(2); q.push(3);
+    q.pop();
+    cout << q.front() << " " << q.back() << "\\n";
+}`,
+        answer: '2 3',
+        explain: 'FIFO: pop removes the **oldest** element (1), so the front becomes 2 while the back stays 3. Identical code to sq-1, opposite end — that contrast *is* the lesson.',
+      },
+      {
+        id: 'sq-3', type: 'mcq', diff: 1,
+        prompt: 'Why does this line fail to compile?',
+        code: `int x = st.pop();   // st is stack<int>`,
+        options: [
+          '`pop()` returns void — read `st.top()` first, then call `st.pop()`',
+          '`pop()` needs the element to remove as an argument',
+          'stack elements can only be read through iterators',
+          '`x` must be declared `auto` to receive a popped value',
+        ],
+        answer: 0,
+        explain: 'C++ splits the operation: `top()` reads, `pop()` discards and returns nothing. Two lines, always: `int x = st.top(); st.pop();`. (Same for queue’s front/pop.)',
+      },
+      {
+        id: 'sq-4', type: 'output', diff: 2,
+        prompt: 'Default priority_queue. What does this print?',
+        code: `int main() {
+    priority_queue<int> pq;
+    pq.push(3); pq.push(7); pq.push(1);
+    cout << pq.top() << " ";
+    pq.pop();
+    cout << pq.top() << "\\n";
+}`,
+        answer: '7 3',
+        explain: '`priority_queue` is a **MAX-heap** by default: top is the largest (7), and after popping it, the next largest (3). If you expected 1, you’ve just met the most common heap bug in the wild.',
+      },
+      {
+        id: 'sq-5', type: 'fill', diff: 2,
+        prompt: 'Complete the min-heap declaration:\n`priority_queue<int, ___, greater<int>> pq;`',
+        answer: ['vector<int>', 'std::vector<int>'],
+        placeholder: '…<int>',
+        explain: 'The three template arguments: element type, underlying container (`vector<int>`), comparator (`greater<int>`). All three are required to flip a heap to min-first — memorize the incantation; you’ll type it in every Dijkstra.',
+      },
+      {
+        id: 'sq-6', type: 'parsons', diff: 2,
+        prompt: 'Assemble the bracket-matching scan for a string of `(` and `)` (sets `ok` to false on any mismatch).',
+        lines: [
+          'stack<char> st;',
+          'bool ok = true;',
+          'for (char c : s) {',
+          "    if (c == '(') st.push(c);",
+          '    else if (st.empty()) { ok = false; break; }',
+          '    else st.pop();',
+          '}',
+          'if (!st.empty()) ok = false;',
+        ],
+        distractors: [
+          'if (!st.empty()) ok = true;',
+        ],
+        explain: 'Openers push; closers must find a non-empty stack to pop, else fail. The final check catches unclosed openers like "((" — the distractor inverts it, blessing exactly the broken strings.',
+      },
+      {
+        id: 'sq-7', type: 'output', diff: 2,
+        prompt: 'A heap of pairs. What does this print?',
+        code: `int main() {
+    priority_queue<pair<int,int>> pq;
+    pq.push({1, 9}); pq.push({3, 2}); pq.push({2, 5});
+    auto [a, b] = pq.top();
+    cout << a << " " << b << "\\n";
+}`,
+        answer: '3 2',
+        explain: 'Pairs compare by `.first` (ties by `.second`), and the default heap is max-first → {3, 2} sits on top. Store {priority, payload} and the heap organizes itself.',
+      },
+      {
+        id: 'sq-8', type: 'tf', diff: 2,
+        statement: 'Calling `q.front()` or `st.top()` on an **empty** container is undefined behavior — you must check `empty()` first.',
+        answer: true,
+        explain: 'No exception, no error message — just UB: garbage values or a crash, often only on the judge’s tests. Every front/top in a loop should be guarded by an emptiness check (it’s also step one of bracket matching).',
+      },
+      {
+        id: 'sq-9', type: 'mcq', diff: 2,
+        prompt: 'Cards lie in a row; players repeatedly take a card from **either end**. Which container gives O(1) for exactly these moves?',
+        options: [
+          '`deque` — push/pop at both ends in O(1)',
+          '`vector` — `erase(v.begin())` is O(1)',
+          '`stack` — one end is enough for two players',
+          '`priority_queue` — it always serves the best card',
+        ],
+        answer: 0,
+        explain: 'Both-ends access is the deque’s whole identity. `vector::erase(begin())` shifts every remaining element — O(n) per take, O(n²) total. (Two indices `l`, `r` walking inward work too — a deque in spirit.)',
+      },
+      {
+        id: 'sq-10', type: 'match', diff: 1,
+        prompt: 'Match each container to its access pattern.',
+        pairs: [
+          ['stack', 'take from the top — LIFO'],
+          ['queue', 'in at the back, out at the front — FIFO'],
+          ['deque', 'push and pop at both ends'],
+          ['priority_queue', 'largest element first (by default)'],
+        ],
+        explain: 'Four shapes of “what comes out next”: most recent (stack), oldest (queue), either end (deque), best (heap). Picking the structure IS picking the algorithm.',
+      },
+      {
+        id: 'sq-11', type: 'mcq', diff: 3,
+        prompt: 'You must support three operations, each up to 2·10⁵ times: insert a number, extract the smallest, and **delete one specific value** (not necessarily the smallest). Best fit?',
+        options: [
+          '`multiset` — `*begin()` for the min, `erase(find(x))` for one copy, all O(log n)',
+          '`priority_queue` — its built-in `erase(x)` handles deletions',
+          'a sorted `vector`, re-sorted after every insert',
+          '`unordered_set` — O(1) and it keeps elements ordered',
+        ],
+        answer: 0,
+        explain: 'priority_queue has NO erase-by-value (the workaround, lazy deletion, defers removals). Re-sorting per insert is O(n log n) each. unordered_set has no order at all. multiset is the pq that can also delete from the middle — its superpower, bought with a bigger constant.',
+        hint: 'Which of these structures can even FIND an arbitrary value?',
+      },
+      {
+        id: 'sq-12', type: 'code', diff: 3,
+        prompt: 'Read one string of brackets `()[]{}`. Print `YES` if every bracket is matched and properly nested, else `NO`.\nExample: `([]{})` → YES, `([)]` → NO.',
+        starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    string s;
+    cin >> s;
+    // stack of expected... or of seen openers?
+
+    return 0;
+}`,
+        tests: [
+          { input: '([]{})', expected: 'YES' },
+          { input: '([)]', expected: 'NO' },
+          { input: '(((', expected: 'NO' },
+        ],
+        solution: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    string s;
+    cin >> s;
+    stack<char> st;
+    bool ok = true;
+    for (char c : s) {
+        if (c == '(' || c == '[' || c == '{') {
+            st.push(c);                      // opener: remember it
+        } else {
+            char need = (c == ')') ? '(' : (c == ']') ? '[' : '{';
+            if (st.empty() || st.top() != need) { ok = false; break; }
+            st.pop();                        // matched the latest opener
+        }
+    }
+    if (!st.empty()) ok = false;             // unclosed openers remain
+    cout << (ok ? "YES" : "NO") << "\\n";
+    return 0;
+}`,
+        explain: 'Three failure modes, three checks: a closer with an empty stack, a closer whose type doesn’t match the top (catches "([)]"), and leftovers at the end (catches "((("). Most wrong submissions miss exactly one of the three.',
+        hint: 'With multiple bracket types, popping isn’t enough — the TOP must be the matching opener.',
+      },
+      {
+        id: 'sq-13', type: 'output', diff: 2,
+        prompt: 'Min-heap with duplicates. What does this print?',
+        code: `int main() {
+    priority_queue<int, vector<int>, greater<int>> pq;
+    for (int x : {5, 1, 4, 1}) pq.push(x);
+    pq.pop();
+    cout << pq.top() << " " << pq.size() << "\\n";
+}`,
+        answer: '1 3',
+        explain: '`greater<int>` flips the heap to min-first: pop removes one 1, and the **other** 1 surfaces — heaps happily hold duplicates. Three elements remain: {1, 4, 5}.',
+        hint: 'How many 1s went in? How many came out?',
+      },
+    ],
+    problems: [
+      { name: 'Sereja and Dima', platform: 'Codeforces', id: '381A', rating: 800, url: 'https://codeforces.com/problemset/problem/381/A', difficulty: 'intro', why: 'Two players taking from either end — pure deque (or two-index) thinking.' },
+      { name: 'Taxi', platform: 'Codeforces', id: '158B', rating: 1100, url: 'https://codeforces.com/problemset/problem/158/B', difficulty: 'easy', why: 'Count group sizes 1–4, then pair them greedily — a tiny counting array beats any fancy container.' },
+      { name: 'Concert Tickets', platform: 'CSES', id: '1091', url: 'https://cses.fi/problemset/task/1091', difficulty: 'med', why: 'multiset upper_bound, then erase that ITERATOR — sell one ticket, not all copies. The trap, live.' },
+    ],
+  },
+
+  // ==========================================================================
+  'stl-toolbox': {
+    id: 'stl-toolbox',
+    objectives: [
+      'Locate values and boundaries in sorted vectors with lower_bound / upper_bound',
+      'Count, dedupe, and aggregate with one-liners (upper−lower, sort+unique+erase, accumulate)',
+      'Use lambdas with count_if / find_if and unpack pairs with structured bindings',
+    ],
+    theory: [
+      {
+        h: 'lower_bound / upper_bound',
+        md: 'On a **sorted** vector, two binary searches in O(log n):\n\n`lower_bound(v.begin(), v.end(), x)` → iterator to the first element **≥ x**.\n`upper_bound(v.begin(), v.end(), x)` → iterator to the first element **> x**.\n\nBoth return `v.end()` when no such element exists. Subtract `v.begin()` to turn the iterator into an index.',
+        code: `vector<int> v = {2, 4, 4, 7, 9};        // must be sorted!
+auto it = lower_bound(v.begin(), v.end(), 4);
+int idx = it - v.begin();               // 1 — first 4
+int j   = upper_bound(v.begin(), v.end(), 4) - v.begin();  // 3 — first >4`,
+        note: 'Unsorted input makes both return garbage with full confidence. Sort first — always.',
+        noteKind: 'warn',
+      },
+      {
+        h: 'Counting with the bounds',
+        md: 'The two bounds bracket every occurrence, so subtraction counts in O(log n):\n\nCopies of x: `upper_bound(x) − lower_bound(x)`.\nValues in [a, b]: `upper_bound(b) − lower_bound(a)`.\n\nSort once for O(n log n), then answer each of q range-count queries in O(log n) — the sorted-array answer to “how many between?”.',
+        code: `sort(v.begin(), v.end());                          // once
+ll inRange = upper_bound(v.begin(), v.end(), b)    // first > b
+           - lower_bound(v.begin(), v.end(), a);   // first ≥ a`,
+      },
+      {
+        h: 'The dedupe idiom',
+        md: 'Three moves, one line of intent — remove duplicates from a vector:\n\n1. `sort` brings equal values together.\n2. `unique` shifts unique values forward and returns the new logical end (it does **not** shrink the vector).\n3. `erase` chops off the leftover tail.\n\n`unique` only collapses **adjacent** duplicates — skipping the sort silently fails.',
+        code: `sort(v.begin(), v.end());                    // group duplicates
+v.erase(unique(v.begin(), v.end()), v.end());// collapse + chop tail
+// v is now sorted AND distinct`,
+      },
+      {
+        h: 'accumulate, min_element, max_element',
+        md: '`accumulate(v.begin(), v.end(), 0LL)` sums the vector — and the third argument’s **type is the accumulator’s type**. Plain `0` sums 64-bit data in a 32-bit int: overflow, the legendary trap. `min_element` / `max_element` return **iterators**, not values — dereference with `*`, or subtract `v.begin()` for the position.',
+        code: `ll total = accumulate(v.begin(), v.end(), 0LL);  // 0LL or bust
+int mx  = *max_element(v.begin(), v.end());      // * to get the VALUE
+int pos = min_element(v.begin(), v.end()) - v.begin();  // index of min`,
+        note: 'accumulate(..., 0) with big values compiles cleanly and returns garbage. The LL suffix is doing all the work.',
+        noteKind: 'danger',
+      },
+      {
+        h: 'Lambdas everywhere + structured bindings',
+        md: 'The `_if` algorithms take a lambda predicate: `count_if` counts matches, `find_if` returns an iterator to the first match (or end). And C++17 **structured bindings** unpack pairs without `.first/.second` noise — they make map loops readable:',
+        code: `int evens = count_if(v.begin(), v.end(),
+                     [](int x) { return x % 2 == 0; });
+
+auto [val, idx] = pr;            // unpack a pair<int,int>
+
+for (auto& [word, c] : cnt)      // map iteration, named fields
+    cout << word << ": " << c << "\\n";`,
+      },
+    ],
+    exercises: [
+      {
+        id: 'tb-1', type: 'output', diff: 1,
+        prompt: 'The vector is sorted. What does this print?',
+        code: `int main() {
+    vector<int> v = {2, 4, 4, 7, 9};
+    cout << lower_bound(v.begin(), v.end(), 4) - v.begin();
+    cout << " ";
+    cout << upper_bound(v.begin(), v.end(), 4) - v.begin();
+}`,
+        answer: '1 3',
+        explain: 'lower_bound finds the first element ≥ 4 (index 1); upper_bound the first > 4 (index 3). Subtracting v.begin() converts iterators to indices — and 3 − 1 = 2 counts the 4s for free.',
+      },
+      {
+        id: 'tb-2', type: 'mcq', diff: 1,
+        prompt: 'On a sorted vector, what does `lower_bound(v.begin(), v.end(), x)` return?',
+        options: [
+          'an iterator to the first element ≥ x (or v.end() if none)',
+          'an iterator to the first element > x',
+          'the index of x, or −1 if x is absent',
+          'an iterator to the last element < x',
+        ],
+        answer: 0,
+        explain: 'lower = first **≥**, upper = first **>** — that single character is the whole distinction. It returns an iterator (never −1); convert to an index with `it - v.begin()`, and absent values give the insertion point, not an error.',
+      },
+      {
+        id: 'tb-3', type: 'output', diff: 2,
+        prompt: 'The dedupe idiom in action. Output?',
+        code: `int main() {
+    vector<int> v = {3, 1, 3, 2, 1};
+    sort(v.begin(), v.end());
+    v.erase(unique(v.begin(), v.end()), v.end());
+    cout << v.size();
+    for (int x : v) cout << " " << x;
+}`,
+        answer: '3 1 2 3',
+        explain: 'sort → {1,1,2,3,3}; unique collapses adjacent duplicates and erase trims the tail → {1,2,3}. Output: size 3, then the elements. Sorted-and-distinct in two lines.',
+      },
+      {
+        id: 'tb-4', type: 'mcq', diff: 2,
+        prompt: 'The “dedupe” failed — v still contains two 1s. What went wrong?',
+        code: `vector<int> v = {1, 2, 1};
+v.erase(unique(v.begin(), v.end()), v.end());
+// v is still {1, 2, 1}`,
+        options: [
+          '`unique` only collapses **adjacent** duplicates — sort first: sort → unique → erase',
+          '`erase` needs a count of elements, not an iterator range',
+          '`unique` never modifies anything; only sets can dedupe',
+          'The vector is too small for unique to engage',
+        ],
+        answer: 0,
+        explain: 'In {1, 2, 1} no equal elements touch, so unique sees nothing to do. The idiom is a package: **sort**, unique, erase. (unique does modify — it shifts survivors forward and returns the new end; it just can’t see non-adjacent twins.)',
+      },
+      {
+        id: 'tb-5', type: 'fill', diff: 2,
+        prompt: 'Count how many times `x` occurs in the **sorted** vector `v`:\n`int k = upper_bound(v.begin(), v.end(), x) - ___;`',
+        answer: ['lower_bound(v.begin(), v.end(), x)', 'lower_bound(v.begin(),v.end(),x)'],
+        placeholder: 'lower_…',
+        explain: 'upper points just past the last x, lower at the first — their distance is the count, in O(log n). Same subtraction with different arguments counts any value range [a, b].',
+      },
+      {
+        id: 'tb-6', type: 'mcq', diff: 2,
+        prompt: 'n = 2·10⁵ values, each up to 10⁹. This prints a **negative** “sum”. Why?',
+        code: `vector<ll> v(n);
+// ... read values ...
+ll s = accumulate(v.begin(), v.end(), 0);
+cout << s << "\\n";`,
+        options: [
+          'The literal `0` is an int, so accumulate sums in int and overflows — write `0LL`',
+          'accumulate cannot return long long at all',
+          'The vector must be sorted before accumulating',
+          '`ll s` is too small; the sum needs unsigned',
+        ],
+        answer: 0,
+        explain: 'The third argument dictates the accumulator type: `0` → int → overflow at ~2.1·10⁹, long before the 2·10¹⁴ total. `0LL` fixes it. Assigning to an `ll` afterwards can’t un-overflow anything — the damage is done inside accumulate.',
+        hint: 'What is the TYPE of the literal 0?',
+      },
+      {
+        id: 'tb-7', type: 'mcq', diff: 2,
+        prompt: 'Why does this line fail to compile?',
+        code: `cout << max_element(v.begin(), v.end()) << "\\n";`,
+        options: [
+          '`max_element` returns an **iterator** — dereference it: `*max_element(...)`',
+          '`max_element` requires a comparator argument',
+          '`cout` cannot print int values without casting',
+          'the vector must be sorted before calling max_element',
+        ],
+        answer: 0,
+        explain: 'min_element/max_element hand back an iterator (a position), not the value. `*it` gets the value; `it - v.begin()` gets the index — the iterator is *more* information, once you remember to unwrap it.',
+      },
+      {
+        id: 'tb-8', type: 'output', diff: 2,
+        prompt: 'A lambda predicate. What does this print?',
+        code: `int main() {
+    vector<int> v = {1, -2, 3, -4, 5};
+    int k = count_if(v.begin(), v.end(),
+                     [](int x) { return x > 0; });
+    cout << k << "\\n";
+}`,
+        answer: '3',
+        explain: 'count_if applies the predicate to each element and counts the trues: 1, 3, 5 → three positives. One line replacing a loop-plus-counter — and the lambda can encode any condition you can write in C++.',
+      },
+      {
+        id: 'tb-9', type: 'bank', diff: 1,
+        prompt: 'Unpack the pair with a structured binding so the print works.',
+        code: `pair<string,int> pr = {"sauce", 7};
+auto [___, ___] = pr;
+cout << name << " " << num << "\\n";`,
+        answer: ['name', 'num'],
+        distractors: ['pr.first', 'auto'],
+        explain: '`auto [name, num] = pr;` declares both variables in field order — no `.first/.second` in sight. The bracket slots take fresh names, not expressions like `pr.first`.',
+      },
+      {
+        id: 'tb-10', type: 'parsons', diff: 2,
+        prompt: 'Assemble: count how many array values fall in the range **[a, b]**, inclusive (input order arbitrary).',
+        lines: [
+          'sort(v.begin(), v.end());',
+          'auto lo = lower_bound(v.begin(), v.end(), a);',
+          'auto hi = upper_bound(v.begin(), v.end(), b);',
+          'cout << hi - lo << "\\n";',
+        ],
+        distractors: [
+          'auto hi = lower_bound(v.begin(), v.end(), b);',
+        ],
+        explain: 'Sort, then bracket: first ≥ a up to first > b. The distractor uses lower_bound for the top end — it stops *at* b instead of after it, silently excluding values equal to b.',
+      },
+      {
+        id: 'tb-11', type: 'code', diff: 3,
+        prompt: 'Read `n`, then `n` integers. Then read `q` queries; for each value `x`, print how many array elements are **≤ x** (one answer per line).',
+        starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<int> a(n);
+    for (auto &x : a) cin >> x;
+    // sort once, then answer each query in O(log n)
+
+    return 0;
+}`,
+        tests: [
+          { input: '5\n1 3 3 7 9\n3\n3\n0\n8', expected: '3\n0\n4' },
+          { input: '1\n5\n2\n5\n4', expected: '1\n0' },
+        ],
+        solution: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<int> a(n);
+    for (auto &x : a) cin >> x;
+    sort(a.begin(), a.end());            // sort ONCE, outside the query loop
+    int q;
+    cin >> q;
+    while (q--) {
+        int x;
+        cin >> x;
+        // first element > x sits at exactly the count of elements <= x
+        cout << upper_bound(a.begin(), a.end(), x) - a.begin() << "\\n";
+    }
+    return 0;
+}`,
+        explain: '“How many ≤ x” is precisely the index of the first element > x — upper_bound minus begin. Sort once (O(n log n)), answer each query in O(log n): the shape that turns 4·10¹⁰ scanning into ~7·10⁶ work.',
+        hint: 'Elements ≤ x occupy a prefix of the sorted array. Which bound finds where that prefix ends?',
+      },
+      {
+        id: 'tb-12', type: 'mcq', diff: 3,
+        prompt: 'n, q ≤ 2·10⁵, 1-second limit: q queries each ask “how many array values equal x?”. Which plan fits the budget?',
+        options: [
+          'Sort once; answer each query with upper_bound − lower_bound: O((n + q) log n)',
+          'For each query, scan the whole array: O(nq) = 4·10¹⁰',
+          'Rebuild a map of counts from scratch for every query',
+          'unordered_map with default hashing — guaranteed O(1) worst case per query',
+        ],
+        answer: 0,
+        explain: 'Sort + two binary searches per query ≈ 7·10⁶ ops — trivial. Scanning is 4·10¹⁰ (dead), rebuilding a map per query is even worse, and unordered_map is O(1) *average*, never guaranteed — hackable on CF. A map of counts built ONCE also works; the sorted-array bounds need no extra memory.',
+        hint: 'Apply the 10⁸ rule to each option before judging elegance.',
+      },
+      {
+        id: 'tb-13', type: 'tf', diff: 1,
+        statement: 'On a sorted vector, `upper_bound(v.begin(), v.end(), x)` returns an iterator to the first element **strictly greater** than x.',
+        answer: true,
+        explain: 'upper = first **>** x; lower = first **≥** x. When x is absent the two coincide (count zero); when present, they bracket exactly its copies. The ≥/> pair is worth reciting until it’s reflex.',
+      },
+    ],
+    problems: [
+      { name: 'Towers', platform: 'CSES', id: '1073', url: 'https://cses.fi/problemset/task/1073', difficulty: 'med', why: 'Greedy with multiset upper_bound: place each cube on the smallest top strictly bigger than it.' },
+      { name: 'Sum of Three Values', platform: 'CSES', id: '1641', url: 'https://cses.fi/problemset/task/1641', difficulty: 'med', why: 'Sort, fix one value, then hunt the other two with scans/lookups on the sorted array — indices need care.' },
+    ],
+  },
 };
