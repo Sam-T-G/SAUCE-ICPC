@@ -18,12 +18,13 @@ const noCompile = args.includes('--no-compile');
 const onlyUnits = args.filter((a) => /^u\d\d$/.test(a));
 
 const { UNITS } = await import(pathToFileURL(join(ROOT, 'data/curriculum.js')));
+const { TYPEIN } = await import(pathToFileURL(join(ROOT, 'data/typein.js')));
 
 let errors = [];
 let warnings = [];
 let stats = { skills: 0, exercises: 0, theory: 0, problems: 0, codeChecked: 0, byType: {} };
 
-const TYPES = ['mcq', 'tf', 'multi', 'fill', 'output', 'parsons', 'order', 'bank', 'match', 'code'];
+const TYPES = ['mcq', 'tf', 'multi', 'fill', 'output', 'parsons', 'order', 'bank', 'typein', 'match', 'code'];
 
 function err(loc, msg) { errors.push(`✗ ${loc}: ${msg}`); }
 function warn(loc, msg) { warnings.push(`⚠ ${loc}: ${msg}`); }
@@ -118,6 +119,18 @@ function validateExercise(loc, ex, seenIds, tmp) {
       if (!Array.isArray(ex.answer) || ex.answer.length !== slots) err(loc, `bank answer length (${ex.answer?.length}) ≠ slot count (${slots})`);
       break;
     }
+    case 'typein': {
+      if (!ex.code || !ex.code.includes('___')) { err(loc, 'typein needs code with ___ slots'); break; }
+      const slots = (ex.code.match(/___/g) ?? []).length;
+      if (!Array.isArray(ex.answer) || ex.answer.length !== slots) {
+        err(loc, `typein answer length (${ex.answer?.length}) ≠ slot count (${slots})`);
+      } else if (ex.answer.some((a) => !(typeof a === 'string' || (Array.isArray(a) && a.length && a.every((v) => typeof v === 'string'))))) {
+        err(loc, 'typein answers must be string or string[] per slot');
+      } else if (ex.answer.some((a) => (Array.isArray(a) ? a[0] : a).length > 30)) {
+        err(loc, 'typein slot answers must be ≤30 chars (keep blanks focused — use a code exercise for more)');
+      }
+      break;
+    }
     case 'match': {
       if (!Array.isArray(ex.pairs) || ex.pairs.length < 3 || ex.pairs.length > 6) err(loc, 'match needs 3-6 pairs');
       else if (ex.pairs.some((p) => !Array.isArray(p) || p.length !== 2)) err(loc, 'match pairs must be [left, right]');
@@ -186,6 +199,14 @@ function validateSkill(unitId, skillId, skill, tmp) {
 const tmp = mkdtempSync(join(tmpdir(), 'sauce-validate-'));
 let unitsChecked = 0;
 
+// every typein entry must belong to a real curriculum skill
+{
+  const known = new Set(UNITS.flatMap((u) => u.skills.map((s) => s.id)));
+  for (const id of Object.keys(TYPEIN)) {
+    if (!known.has(id)) err('typein', `entries for unknown skill "${id}"`);
+  }
+}
+
 for (const unit of UNITS) {
   if (onlyUnits.length && !onlyUnits.includes(unit.id)) continue;
   let mod;
@@ -201,7 +222,11 @@ for (const unit of UNITS) {
 
   for (const s of unit.skills) {
     if (!SKILLS[s.id]) { err(unit.id, `missing content for skill "${s.id}"`); continue; }
-    validateSkill(unit.id, s.id, SKILLS[s.id], tmp);
+    // merge type-the-code drills exactly as the app does (data/curriculum.js)
+    const skill = TYPEIN[s.id]?.length
+      ? { ...SKILLS[s.id], exercises: [...SKILLS[s.id].exercises, ...TYPEIN[s.id]] }
+      : SKILLS[s.id];
+    validateSkill(unit.id, s.id, skill, tmp);
   }
   for (const key of Object.keys(SKILLS)) {
     if (!unit.skills.some((s) => s.id === key)) warn(unit.id, `content for unknown skill "${key}" (not in curriculum)`);

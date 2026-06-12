@@ -146,6 +146,29 @@ await page.locator('#wtest .btn', { hasText: 'flush' }).click();
 await page.locator('#wtest .btn', { hasText: 'sync_with_stdio' }).click();
 check('bank wrong tokens detected', (await verdict()).correct === false);
 
+console.log('\n— typein (type into code blanks) —');
+const typein = {
+  id: 't8b', type: 'typein', diff: 2, prompt: 'Type the missing code',
+  code: 'for (int i = 0; ___; i++) {\n    sum += ___;\n}',
+  answer: [['i < n', 'i<n'], 'a[i]'],
+  explain: 'Loop bound and the element access, typed from memory.',
+};
+await render(typein);
+check('typein not ready while blanks empty', !(await ready()));
+await page.fill('#wtest .typein-input >> nth=0', 'i  <  n');   // whitespace-forgiving
+await page.fill('#wtest .typein-input >> nth=1', 'a[i]');
+check('typein ready when all filled', await ready());
+check('typein correct (whitespace-forgiving)', (await verdict()).correct === true);
+await render(typein);
+await page.fill('#wtest .typein-input >> nth=0', 'i <= n');     // real off-by-one
+await page.fill('#wtest .typein-input >> nth=1', 'a[i]');
+check('typein wrong detected', (await verdict()).correct === false);
+check('wrong slot highlighted', (await page.locator('#wtest .typein-input.wrong').count()) === 1);
+await render(typein);
+await page.fill('#wtest .typein-input >> nth=0', 'I < N');      // case must matter
+await page.fill('#wtest .typein-input >> nth=1', 'a[i]');
+check('typein is case-sensitive', (await verdict()).correct === false);
+
 console.log('\n— match —');
 const match = { id: 't9', type: 'match', diff: 1, prompt: 'Match them', pairs: [['AC', 'accepted'], ['WA', 'wrong'], ['TLE', 'slow']], explain: 'Verdict vocabulary, the bread and butter.' };
 await render(match);

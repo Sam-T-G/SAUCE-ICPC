@@ -201,12 +201,25 @@ export function unitById(unitId) {
 
 // ---------------------------------------------------------------------------
 // Lazy content loading (data/units/uXX.js export SKILLS = { skillId: {...} })
+// Type-the-code drills from data/typein.js are merged into each skill's
+// exercise pool here, once, at load time.
 // ---------------------------------------------------------------------------
+import { TYPEIN } from './typein.js';
+
 const contentCache = new Map();
 
 export async function loadUnitContent(unitId) {
   if (!contentCache.has(unitId)) {
-    const promise = import(`./units/${unitId}.js`).then((m) => m.SKILLS);
+    const promise = import(`./units/${unitId}.js`).then((m) => {
+      const merged = {};
+      for (const [id, skill] of Object.entries(m.SKILLS)) {
+        const extra = TYPEIN[id] ?? [];
+        merged[id] = extra.length
+          ? { ...skill, exercises: [...skill.exercises, ...extra] }
+          : skill;
+      }
+      return merged;
+    });
     contentCache.set(unitId, promise);
   }
   return contentCache.get(unitId);

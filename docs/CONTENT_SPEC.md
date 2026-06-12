@@ -71,6 +71,7 @@ Common fields, all REQUIRED unless noted:
 | `parsons` | `lines: [correct order]`, `distractors?: [wrong lines]` | ≥3 lines, no duplicate lines |
 | `order` | `items: [correct order]` | non-code ordering (steps, complexities) |
 | `bank` | `code` with `___` slots, `answer: [token per slot]`, `distractors?` | tap-to-fill completion |
+| `typein` | `code` with `___` slots, `answer: [per slot: 'str' or ['variants']]` | **type code directly into the blanks**. Whitespace-forgiving, case-SENSITIVE. Keep each blank ≤30 chars and focused (an expression, a condition, a call). The typed-recall rung: harder than bank, gentler than `code`. |
 | `match` | `pairs: [[l,r] ×3-6]` | lefts unique, rights unique |
 | `code` | `starter`, `tests: [{input, expected} ×2-3]`, `solution` | ≤1 per skill. **solution MUST compile (g++ -std=c++17) and pass its tests — the validator executes it.** Full programs reading stdin/writing stdout. |
 
@@ -78,7 +79,9 @@ Common fields, all REQUIRED unless noted:
 
 1. **Ladder**: ≥2 tracing exercises (`output` or code-reading `mcq`) at diff 1–2
    BEFORE heavier production tasks. Sequence within a skill should roughly
-   follow trace → assemble (`parsons`/`bank`) → recall (`fill`) → produce (`code`).
+   follow trace → assemble (`parsons`/`bank`) → typed recall (`typein`/`fill`)
+   → produce (`code`). Aim for ≥1 `typein` per skill where the skill has a
+   canonical code idiom worth typing from memory.
 2. **Variety**: ≥5 distinct types per skill. Mix keeps sessions alive.
 3. **Difficulty spread**: at least two diff-1, four diff-2, two diff-3.
 4. **Distractors are diagnoses**: every wrong MCQ option / parsons distractor /

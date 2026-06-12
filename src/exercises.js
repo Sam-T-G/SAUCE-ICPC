@@ -9,7 +9,7 @@
 //   { check(): {correct, detail?}, lock(), reveal(), focus() }
 // and calls ctx.setReady(bool) when the answer becomes checkable.
 // ============================================================================
-import { el, esc, md, shuffle, answerMatches, normalizeOutput } from './util.js';
+import { el, esc, md, shuffle, answerMatches, normalizeOutput, codeMatches } from './util.js';
 import { codeBlock, highlightCpp } from './highlight.js';
 import { sfx } from './audio.js';
 import { runCpp } from './runner.js';
@@ -379,6 +379,81 @@ function renderBank(root, ex, ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Typein — type code directly into blanks inside a code block.
+// The typed-recall rung of the ladder: harder than bank (no token menu),
+// gentler than a blank editor. Comparison is whitespace-forgiving but
+// CASE-SENSITIVE (it's C++).
+// ---------------------------------------------------------------------------
+function renderTypein(root, ex, ctx) {
+  let locked = false;
+  const slots = (ex.code.match(/___/g) ?? []).length;
+  const inputs = [];
+
+  const wrap = el('div', { class: 'codeblock typein' });
+  const pre = el('pre');
+  ex.code.split('___').forEach((part, i, arr) => {
+    const span = el('span');
+    span.innerHTML = highlightCpp(part);
+    pre.append(span);
+    if (i < arr.length - 1) {
+      const accepted = ex.answer[i];
+      const canonical = Array.isArray(accepted) ? accepted[0] : accepted;
+      const input = el('input', {
+        class: 'typein-input',
+        type: 'text',
+        autocomplete: 'off',
+        autocapitalize: 'off',
+        spellcheck: 'false',
+        'aria-label': `code blank ${i + 1}`,
+        style: { width: `${Math.max(4, Math.min(28, canonical.length + 2))}ch` },
+      });
+      input.addEventListener('input', () => {
+        // grow with content, keep code layout readable
+        input.style.width = `${Math.max(4, Math.min(34, Math.max(canonical.length, input.value.length) + 2))}ch`;
+        ctx.setReady(inputs.every((inp) => inp.value.trim().length > 0));
+      });
+      input.addEventListener('keydown', (e) => {
+        // Enter moves to next empty blank instead of submitting mid-way
+        if (e.key === 'Enter') {
+          const next = inputs.find((inp) => inp !== input && inp.value.trim() === '');
+          if (next) { e.preventDefault(); e.stopPropagation(); next.focus(); }
+        }
+      });
+      inputs.push(input);
+      pre.append(input);
+    }
+  });
+  wrap.append(pre);
+  root.append(promptBlock({ ...ex, code: null }), wrap,
+    el('div', { class: 'parsons-label', style: { marginTop: '8px' } },
+      `type the missing code — ${slots} blank${slots > 1 ? 's' : ''}, whitespace-forgiving, case matters`));
+
+  return {
+    check() {
+      locked = true;
+      let correct = true;
+      inputs.forEach((input, i) => {
+        const ok = codeMatches(input.value, ex.answer[i]);
+        input.classList.add(ok ? 'correct' : 'wrong');
+        input.disabled = true;
+        if (!ok) correct = false;
+      });
+      return { correct };
+    },
+    lock() { locked = true; inputs.forEach((i) => (i.disabled = true)); },
+    reveal() {
+      const sol = ex.code.split('___').map((p, i, arr) => {
+        if (i === arr.length - 1) return p;
+        const a = ex.answer[i];
+        return p + (Array.isArray(a) ? a[0] : a);
+      }).join('');
+      root.append(el('div', { class: 'mt-2' }, el('div', { class: 'parsons-label' }, 'Completed code'), codeBlock(sol, { copy: false })));
+    },
+    focus() { inputs[0]?.focus(); },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Match — tap matching pairs
 // ---------------------------------------------------------------------------
 function renderMatch(root, ex, ctx) {
@@ -550,6 +625,7 @@ export function renderExercise(root, ex, ctx) {
     case 'parsons':
     case 'order': return renderParsons(root, ex, ctx);
     case 'bank': return renderBank(root, ex, ctx);
+    case 'typein': return renderTypein(root, ex, ctx);
     case 'match': return renderMatch(root, ex, ctx);
     case 'code': return renderCode(root, ex, ctx);
     default:
@@ -568,6 +644,7 @@ export const TYPE_LABELS = {
   parsons: 'Assemble the code',
   order: 'Put in order',
   bank: 'Complete the code',
+  typein: 'Type the code',
   match: 'Match the pairs',
   code: 'Write the code',
 };

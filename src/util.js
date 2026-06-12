@@ -129,6 +129,24 @@ export function normalizeOutput(s) {
   return String(s ?? '').replace(/[ \t]+$/gm, '').replace(/\s+$/, '');
 }
 
+/**
+ * Normalize a typed CODE fragment: whitespace-forgiving but CASE-SENSITIVE
+ * (C++ is; `Sort` is not `sort`). Used by the typein exercise type.
+ */
+export function normalizeCode(s) {
+  return String(s ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([(),;<>[\]{}=+\-*/%!&|^.])\s*/g, '$1');
+}
+
+/** Compare a typed code fragment against accepted answer(s), case-sensitively. */
+export function codeMatches(given, accepted) {
+  const g = normalizeCode(given);
+  const list = Array.isArray(accepted) ? accepted : [accepted];
+  return list.some((a) => normalizeCode(a) === g);
+}
+
 let uidCounter = 0;
 export function uid(prefix = 'id') { return `${prefix}-${Date.now().toString(36)}-${(uidCounter++).toString(36)}`; }
 

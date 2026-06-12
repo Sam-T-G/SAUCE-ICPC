@@ -305,6 +305,39 @@
 .p-line.good { border-color: var(--ok-strong); background: var(--ok-soft); }
 .p-line.misplaced { border-color: var(--bad-strong); background: var(--bad-soft); }
 
+/* typein — inline code inputs */
+.codeblock.typein pre { overflow-x: auto; line-height: 2; }
+.typein-input {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  background: #ffffff10;
+  border: none;
+  border-bottom: 2px dashed var(--info);
+  border-radius: 6px 6px 0 0;
+  color: #fff;
+  padding: 1px 6px;
+  margin: 0 2px;
+  vertical-align: baseline;
+  transition: width var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+.typein-input:focus {
+  outline: none;
+  background: var(--info-soft);
+  border-bottom-style: solid;
+}
+.typein-input.correct {
+  background: var(--ok-soft);
+  border-bottom: 2px solid var(--ok-strong);
+  color: var(--ok);
+}
+.typein-input.wrong {
+  background: var(--bad-soft);
+  border-bottom: 2px solid var(--bad-strong);
+  color: var(--bad);
+  animation: shake 0.5s;
+}
+
 /* match pairs */
 .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .match-grid .opt { justify-content: center; text-align: center; font-family: var(--font-mono); font-size: var(--fs-sm); min-height: 58px; }
