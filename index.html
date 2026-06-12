@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>SAUCE Academy — ICPC Training, from Zero to Regionals</title>
+  <meta name="description" content="Interactive, pedagogy-backed competitive programming trainer: C++ fundamentals to ICPC level. Spaced repetition, mastery learning, and a curated problem ladder." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌶️</text></svg>" />
+  <link rel="stylesheet" href="styles/tokens.css" />
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/views.css" />
+</head>
+<body>
+  <div id="app">
+    <nav class="sidebar" id="sidebar" aria-label="Main navigation"></nav>
+    <main class="main">
+      <div class="content" id="view" aria-live="polite"></div>
+    </main>
+  </div>
+  <nav class="tabbar" id="tabbar" aria-label="Main navigation"></nav>
+  <div id="overlay"></div>
+  <div id="toasts" aria-live="assertive"></div>
+  <canvas id="fx-canvas"></canvas>
+
+  <noscript>
+    <div style="padding:40px;text-align:center;font-family:sans-serif">
+      <h1>🌶️ SAUCE Academy</h1>
+      <p>This app needs JavaScript. Enable it, or open <code>SAUCE.cpp</code> for the raw handbook.</p>
+    </div>
+  </noscript>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

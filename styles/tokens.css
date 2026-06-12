@@ -1,0 +1,134 @@
+/* ============================================================================
+   SAUCE Academy — Design Tokens
+   Dark-first palette tuned for long practice sessions; vibrant accents per
+   unit echo Duolingo's color-coded path while staying easy on the eyes.
+   ========================================================================== */
+
+:root {
+  /* ---- Core surfaces (dark theme default) ---- */
+  --bg: #0d1117;
+  --bg-soft: #11161f;
+  --surface: #161d29;
+  --surface-2: #1c2433;
+  --surface-3: #232e41;
+  --border: #2a3650;
+  --border-strong: #3a4a6b;
+
+  /* ---- Text ---- */
+  --text: #e8edf6;
+  --text-soft: #aab6cc;
+  --text-faint: #6b7a96;
+  --text-inverse: #0d1117;
+
+  /* ---- Brand & semantic ---- */
+  --brand: #ff5a3c;            /* sauce red-orange */
+  --brand-soft: #ff5a3c22;
+  --gold: #ffc800;
+  --gold-soft: #ffc80022;
+  --xp: #ffb020;
+  --streak: #ff7a1a;
+
+  --ok: #3ddc6e;
+  --ok-strong: #2bb656;
+  --ok-soft: #3ddc6e1e;
+  --bad: #ff4b6e;
+  --bad-strong: #d93a59;
+  --bad-soft: #ff4b6e1f;
+  --info: #38b6ff;
+  --info-soft: #38b6ff1f;
+  --warn: #ffb020;
+  --warn-soft: #ffb02022;
+
+  /* ---- Unit accent palette (assigned in data/curriculum.js) ---- */
+  --u-green: #58cc02;
+  --u-cyan: #21c0e8;
+  --u-violet: #a06bff;
+  --u-amber: #ffaa00;
+  --u-rose: #ff6286;
+  --u-teal: #00cfa8;
+  --u-blue: #4f7dff;
+  --u-orange: #ff7a1a;
+  --u-lime: #b5e61d;
+  --u-pink: #f062c0;
+  --u-red: #ff5a3c;
+
+  /* ---- Code block colors ---- */
+  --code-bg: #0b0f16;
+  --code-border: #222c40;
+  --code-text: #d6e2f3;
+  --code-kw: #ff7ab2;
+  --code-type: #7ee0ff;
+  --code-str: #a8e07a;
+  --code-num: #ffc66d;
+  --code-comment: #5d7290;
+  --code-fn: #b6a3ff;
+  --code-pre: #8aa3c0;
+
+  /* ---- Typography ---- */
+  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fs-xs: 0.72rem;
+  --fs-sm: 0.84rem;
+  --fs-md: 0.95rem;
+  --fs-lg: 1.1rem;
+  --fs-xl: 1.35rem;
+  --fs-2xl: 1.7rem;
+  --fs-3xl: 2.2rem;
+
+  /* ---- Geometry ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --pop: 0 0 0 transparent;
+
+  /* ---- Layout ---- */
+  --sidebar-w: 232px;
+  --topbar-h: 60px;
+  --content-max: 920px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 120ms;
+  --t-med: 220ms;
+  --t-slow: 420ms;
+}
+
+/* ---- Light theme ---- */
+:root[data-theme="light"] {
+  --bg: #f4f7fb;
+  --bg-soft: #eef2f8;
+  --surface: #ffffff;
+  --surface-2: #f3f6fb;
+  --surface-3: #e9eef7;
+  --border: #d8e0ee;
+  --border-strong: #b9c6dd;
+
+  --text: #19233a;
+  --text-soft: #45536e;
+  --text-faint: #7e8ba3;
+  --text-inverse: #ffffff;
+
+  --code-bg: #0f1522;
+  --shadow-1: 0 2px 8px rgba(28, 42, 74, 0.10);
+  --shadow-2: 0 10px 30px rgba(28, 42, 74, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-med: 0ms;
+    --t-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
