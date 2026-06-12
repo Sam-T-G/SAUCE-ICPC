@@ -123,6 +123,8 @@
 }
 @keyframes hop { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); } }
 
+.path-row:has(.sn-start) { padding-top: 44px; }
+
 .path-connector { position: absolute; left: 50%; width: 4px; height: 18px; background: var(--border); transform: translateX(-50%); }
 
 /* skill flyout */

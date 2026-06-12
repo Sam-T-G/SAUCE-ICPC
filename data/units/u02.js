@@ -217,5 +217,486 @@ while (q--) {
     ],
   },
 
+  // ==========================================================================
+  'stl-sort': {
+    id: 'stl-sort',
+    objectives: [
+      'Sort vectors, strings, and pairs with sort() and reason about its O(n log n) cost',
+      'Write custom comparator lambdas that obey strict weak ordering',
+      'Sort descending, by computed keys, and by index — without undefined behavior',
+    ],
+    theory: [
+      {
+        h: 'sort(): the workhorse',
+        md: '`sort(v.begin(), v.end())` arranges any vector (or string, or array) ascending in **O(n log n)** — guaranteed, worst case (GCC uses introsort). Sorting is the great unlocker: medians, greedy sweeps, duplicate detection, and binary search all *start* with “sort it first.” At n = 2·10⁵ a sort costs ~3.6·10⁶ ops — essentially free against the 10⁸ budget.',
+        code: `vector<int> v = {31, 4, 15, 9};
+sort(v.begin(), v.end());            // {4, 9, 15, 31}
+sort(v.rbegin(), v.rend());          // {31, 15, 9, 4} (descending)
+
+string s = "sauce";
+sort(s.begin(), s.end());            // "acesu" — strings sort too`,
+      },
+      {
+        h: 'Pairs sort lexicographically',
+        md: '`pair<int,int>` compares by `.first`, breaking ties by `.second` — automatically. So “sort by X, ties by Y” is often zero extra code: just *store* (X, Y). The classic trick: keep each value with its original index as `{value, index}`, sort, and you know where everything came from.',
+        code: `vector<pair<int,int>> v;             // {value, original index}
+for (int i = 0; i < n; i++)
+    v.push_back({a[i], i});
+sort(v.begin(), v.end());            // by value; equal values by index`,
+      },
+      {
+        h: 'Custom comparators',
+        md: 'A comparator is a function answering one question: **must `a` come strictly before `b`?** Pass a lambda as sort’s third argument. Descending order has a shortcut: `greater<int>()`.',
+        code: `// descending, two ways
+sort(v.begin(), v.end(), greater<int>());
+sort(v.begin(), v.end(), [](int a, int b) { return a > b; });
+
+// by length, ties alphabetically
+sort(w.begin(), w.end(), [](const string& a, const string& b) {
+    if (a.size() != b.size()) return a.size() < b.size();  // primary key
+    return a < b;                                          // tiebreak
+});`,
+      },
+      {
+        h: 'THE comparator bug: <= breaks everything',
+        md: 'A comparator must be a **strict weak ordering** — in particular `comp(x, x)` must be `false`. Write `<=` or `>=` and you break that contract: sort’s internals may read out of bounds and **segfault on large inputs** while passing every small test. This is the most famous self-inflicted RE in competitive programming.',
+        code: `sort(v.begin(), v.end(), [](int a, int b) {
+    return a <= b;     // ☠ comp(x, x) == true → undefined behavior
+});
+// correct: return a < b;   (strict!)`,
+        note: 'Equal elements must answer “no, neither comes first.” If your comparator ever returns true for equal arguments, it is wrong — even if it “works” today.',
+        noteKind: 'danger',
+      },
+      {
+        h: 'stable_sort and sorting indices',
+        md: '`sort` gives **no promise** about the order of equal elements; `stable_sort` keeps their original input order (slightly slower, same O(n log n)). And when you need the *positions* sorted rather than the values, sort an index array with a capturing lambda:',
+        code: `vector<int> idx(n);
+iota(idx.begin(), idx.end(), 0);       // 0, 1, ..., n-1
+sort(idx.begin(), idx.end(), [&](int i, int j) {
+    return a[i] < a[j];                // compare by the values they point at
+});
+// idx[0] is the position of the smallest element of a`,
+      },
+    ],
+    exercises: [
+      {
+        id: 'sort-1', type: 'output', diff: 1,
+        prompt: 'What does this print?',
+        code: `int main() {
+    vector<int> v = {31, 4, 15, 9};
+    sort(v.begin(), v.end());
+    cout << v[0] << " " << v[3] << "\\n";
+}`,
+        answer: '4 31',
+        explain: 'After sorting ascending, v = {4, 9, 15, 31}: index 0 holds the minimum, the last index the maximum. Sorted position 0 = min and back() = max is a fact you’ll lean on constantly.',
+      },
+      {
+        id: 'sort-2', type: 'output', diff: 1,
+        prompt: 'Pairs use their default order here. Output?',
+        code: `int main() {
+    vector<pair<int,int>> v = {{2, 5}, {1, 9}, {2, 3}};
+    sort(v.begin(), v.end());
+    for (auto [a, b] : v) cout << a << b << " ";
+}`,
+        answer: '19 23 25',
+        explain: 'Pairs compare by first, ties by second: {1,9} then {2,3} then {2,5}. Each prints as two digits glued together. Lexicographic pair order is free “sort by X, tie by Y”.',
+      },
+      {
+        id: 'sort-3', type: 'mcq', diff: 1,
+        prompt: 'Which call correctly sorts `vector<int> v` in **descending** order?',
+        options: [
+          '`sort(v.begin(), v.end(), greater<int>());`',
+          '`sort(v.end(), v.begin());`',
+          '`sort(v.begin(), v.end(), [](int a, int b){ return a >= b; });`',
+          '`sort(v.begin(), v.end(), greater<int>);`',
+        ],
+        answer: 0,
+        explain: '`greater<int>()` (note the parentheses — you pass an *instance*) sorts descending. Swapped iterators are UB, `>=` violates strict weak ordering (crash on big inputs), and `greater<int>` without `()` doesn’t compile. Also fine: sort ascending, then `reverse`.',
+      },
+      {
+        id: 'sort-4', type: 'mcq', diff: 2,
+        prompt: 'This compiles, passes the samples, then **segfaults** on a large test. Why?',
+        code: `sort(v.begin(), v.end(), [](int a, int b) {
+    return a <= b;       // looks harmless
+});`,
+        options: [
+          '`<=` violates strict weak ordering — comp(x, x) must be false, so sort may walk out of bounds: undefined behavior',
+          'Lambdas can’t be used as comparators; you need a function pointer',
+          'It silently sorts descending, which corrupts the vector',
+          '`sort` requires the vector to be nearly sorted already',
+        ],
+        answer: 0,
+        explain: 'With `<=`, equal elements each claim to precede the other; sort’s partition step trusts the comparator and can run past the array bounds. Small tests often survive — big ones crash. Comparators use strict `<` or `>`, never `<=`/`>=`.',
+        hint: 'What does this comparator say about two EQUAL elements?',
+      },
+      {
+        id: 'sort-5', type: 'bank', diff: 2,
+        prompt: 'Sort points by x **ascending**, ties by y **descending**. Fill the comparison operators.',
+        code: `sort(v.begin(), v.end(), [](pair<int,int> a, pair<int,int> b) {
+    if (a.first != b.first) return a.first ___ b.first;
+    return a.second ___ b.second;
+});`,
+        answer: ['<', '>'],
+        distractors: ['<=', '>='],
+        explain: 'Primary key ascending → `<`; tiebreak descending → `>`. The `<=`/`>=` tokens are landmines: they break strict weak ordering and invite a segfault. The `!=` guard keeps the two keys cleanly separated.',
+      },
+      {
+        id: 'sort-6', type: 'output', diff: 2,
+        prompt: 'Custom comparator trace. Output?',
+        code: `int main() {
+    vector<string> v = {"kiwi", "fig", "banana"};
+    sort(v.begin(), v.end(), [](const string& a, const string& b) {
+        return a.size() < b.size();
+    });
+    cout << v[0] << " " << v[2] << "\\n";
+}`,
+        answer: 'fig banana',
+        explain: 'Sorting by length: fig (3), kiwi (4), banana (6) — so v[0] is "fig" and v[2] is "banana". The comparator completely replaces alphabetical order; only what it mentions matters.',
+      },
+      {
+        id: 'sort-7', type: 'tf', diff: 1,
+        statement: '`std::sort` is O(n log n) even in the worst case, so sorting 2·10⁵ elements is far within a 1-second limit.',
+        answer: true,
+        explain: 'Introsort (quicksort + heapsort fallback) guarantees O(n log n): ~3.6·10⁶ ops at n = 2·10⁵. “Can I afford to sort?” is almost always yes — which is why so many solutions begin with it.',
+      },
+      {
+        id: 'sort-8', type: 'parsons', diff: 2,
+        prompt: 'Assemble: sort the **indices** 0..n−1 by the values `a[i]` they point to (smallest value’s index first).',
+        lines: [
+          'vector<int> idx(n);',
+          'iota(idx.begin(), idx.end(), 0);',
+          'sort(idx.begin(), idx.end(), [&](int i, int j) {',
+          '    return a[i] < a[j];',
+          '});',
+        ],
+        distractors: [
+          'sort(idx.begin(), idx.end(), [](int i, int j) {',
+          '    return i < j;',
+        ],
+        explain: 'Fill idx with 0..n−1 (`iota`), then sort it comparing `a[i] < a[j]` — the lambda must capture `[&]` to see `a`. The distractors are real bugs: no capture won’t compile, and `i < j` sorts indices by themselves, changing nothing.',
+      },
+      {
+        id: 'sort-9', type: 'mcq', diff: 2,
+        prompt: 'Contestants must be sorted by score descending, but **equal scores must keep their input order**. Which call is guaranteed correct?',
+        options: [
+          '`stable_sort(v.begin(), v.end(), byScoreDesc);`',
+          '`sort(v.begin(), v.end(), byScoreDesc);` — sort never reorders equal elements',
+          'Calling `sort` twice with the same comparator',
+          '`reverse` the input, then `sort` ascending',
+        ],
+        answer: 0,
+        explain: '`sort` makes NO promise about ties — it may shuffle equal elements freely. `stable_sort` preserves their original order. The other fix: add the index as an explicit tiebreaker in the comparator.',
+      },
+      {
+        id: 'sort-10', type: 'fill', diff: 2,
+        prompt: 'Complete the comparator body so the vector sorts **descending**:\n`sort(v.begin(), v.end(), [](int a, int b) { return ___; });`',
+        answer: ['a > b', 'a>b', 'b < a', 'b<a'],
+        placeholder: 'a … b',
+        explain: '“Should a come before b?” — in descending order, yes exactly when `a > b`. Strict `>`, never `>=`: equal elements must not claim to precede each other.',
+      },
+      {
+        id: 'sort-11', type: 'code', diff: 3,
+        prompt: 'Read `n`, then `n` words. Print them on one line, space-separated, sorted by **length ascending**, ties broken **alphabetically**.\nExample: `banana fig kiwi date` → `fig date kiwi banana`.',
+        starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<string> w(n);
+    for (auto &s : w) cin >> s;
+    // sort with a custom comparator, then print
+
+    return 0;
+}`,
+        tests: [
+          { input: '4\nbanana fig kiwi date', expected: 'fig date kiwi banana' },
+          { input: '3\nbb cc aa', expected: 'aa bb cc' },
+          { input: '1\nz', expected: 'z' },
+        ],
+        solution: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<string> w(n);
+    for (auto &s : w) cin >> s;
+    sort(w.begin(), w.end(), [](const string& a, const string& b) {
+        if (a.size() != b.size()) return a.size() < b.size();  // primary key
+        return a < b;                                          // tiebreak
+    });
+    for (int i = 0; i < n; i++)
+        cout << w[i] << (i + 1 < n ? ' ' : '\\n');
+    return 0;
+}`,
+        explain: 'Two-key comparator shape: compare the primary key when it differs, otherwise return the tiebreak. Both comparisons strict (`<`) — and `const string&` avoids copying every word on every comparison.',
+        hint: 'if (sizes differ) decide by size; else decide alphabetically. Strict < in both branches.',
+      },
+      {
+        id: 'sort-12', type: 'mcq', diff: 3,
+        prompt: 'n = 10⁵ elements, q = 10⁵ queries — and you call `sort` on the whole array **inside** the query loop. Total cost?',
+        options: [
+          'O(q · n log n) ≈ 1.7·10¹¹ — hopeless; sort once before the loop',
+          'O(n log n) — sort detects it’s already sorted and returns instantly',
+          'O(q + n log n) — sorts after the first are free',
+          'O(n²) — sorting q times costs the same as one quadratic pass',
+        ],
+        answer: 0,
+        explain: 'Costs inside a loop multiply: q × n log n ≈ 10⁵ × 1.7·10⁶ = 1.7·10¹¹. sort has no memory between calls — *you* must hoist it out of the loop. “Cheap operation × huge loop” is the classic self-inflicted TLE.',
+        hint: 'sort is O(n log n) every single time you call it.',
+      },
+    ],
+    problems: [
+      { name: 'Dragons', platform: 'Codeforces', id: '230A', rating: 1000, url: 'https://codeforces.com/problemset/problem/230/A', difficulty: 'easy', why: 'Sort the dragons by strength, then sweep — sorting unlocks the greedy.' },
+      { name: 'Distinct Numbers', platform: 'CSES', id: '1621', url: 'https://cses.fi/problemset/task/1621', difficulty: 'easy', why: 'Sort and count adjacent changes (or throw everything in a set) — pick your weapon.' },
+      { name: 'Stick Lengths', platform: 'CSES', id: '1074', url: 'https://cses.fi/problemset/task/1074', difficulty: 'easy', why: 'Sorting reveals the median as the optimal target. Total cost needs long long.' },
+    ],
+  },
+
+  // ==========================================================================
+  'stl-set-map': {
+    id: 'stl-set-map',
+    objectives: [
+      'Choose set, multiset, or map for O(log n) membership, counting, and ordered iteration',
+      'Use the map counting idiom cnt[x]++ — and dodge operator[]’s create-on-read trap',
+      'Erase exactly one copy from a multiset (and know what erase(value) really does)',
+      'Know when unordered_map’s O(1) is a lie on Codeforces',
+    ],
+    theory: [
+      {
+        h: 'set: sorted, unique, O(log n)',
+        md: 'A `set<T>` keeps **unique** elements in **sorted order** with `insert`, `erase`, `find`, and `count` all in O(log n). Iterating walks the elements in ascending order, `*s.begin()` is the minimum, `*s.rbegin()` the maximum. The moment a problem says “has this value appeared before?”, a set is the answer.',
+        code: `set<int> s;
+s.insert(5);                 // O(log n)
+s.insert(5);                 // duplicate: ignored, still one 5
+if (s.count(5)) ...          // membership test: 0 or 1
+s.erase(5);                  // gone
+int lo = *s.begin();         // smallest (set is sorted)
+for (int x : s) ...          // visits in ascending order`,
+      },
+      {
+        h: 'map: a dictionary with sorted keys',
+        md: '`map<K,V>` stores key → value pairs, sorted by key, O(log n) per operation. `m[k]` accesses the value for k, and the golden idiom counts anything in one line: `cnt[x]++`. Iteration yields `{key, value}` pairs in key order — structured bindings make it clean.',
+        code: `map<string, int> cnt;
+for (string w; cin >> w; )
+    cnt[w]++;                      // counting idiom: works immediately
+
+for (auto& [word, c] : cnt)        // keys come out sorted
+    cout << word << " " << c << "\\n";`,
+      },
+      {
+        h: 'operator[] CREATES missing keys',
+        md: 'Why does `cnt[x]++` work on a brand-new key? Because `m[k]` **inserts** `{k, 0}` when k is absent — then hands you the value. Great for counting, terrible for lookups: `if (m[x] > 0)` quietly inserts x with value 0, bloating the map, slowing it, and corrupting any later `m.size()` or iteration.',
+        code: `map<int,int> m;
+if (m[42] > 0) ...     // ☠ just INSERTED {42, 0} — a "read" that writes
+if (m.count(42)) ...   // ✓ pure lookup, map untouched
+auto it = m.find(42);  // ✓ iterator, or m.end() if absent`,
+        note: 'Reading with `[]` mutates the map. Lookups use `.count()` or `.find()`; only counting/assignment should use `[]`.',
+        noteKind: 'warn',
+      },
+      {
+        h: 'multiset and THE erase trap',
+        md: '`multiset` is a set that allows **duplicates** — perfect for “bag of values, repeatedly take min/max.” But its most famous trap: `ms.erase(value)` removes **ALL** copies of value. To delete exactly one, erase by *iterator*: `ms.erase(ms.find(value))`.',
+        code: `multiset<int> ms = {5, 5, 5, 8};
+ms.erase(5);              // ☠ removes ALL the 5s → {8}
+
+multiset<int> t = {5, 5, 5, 8};
+t.erase(t.find(5));       // ✓ removes ONE 5 → {5, 5, 8}`,
+        note: 'erase(value) → all copies. erase(iterator) → that one element. This single line has ended rated rounds.',
+        noteKind: 'danger',
+      },
+      {
+        h: 'unordered_map: fast, fragile, hackable',
+        md: '`unordered_map` is a hash table: O(1) *average* per operation, no ordering. The catch: with crafted keys all entries collide and every operation degrades to O(n) — and on **Codeforces, hacking phase exists precisely to feed you such inputs**. In rated rounds prefer `map` (a predictable log factor) or use a custom randomized hash. Off CF, unordered_map on random-ish keys is fine.',
+        code: `unordered_map<int,int> fast;   // O(1) avg, O(n) worst, unsorted
+map<int,int> safe;             // O(log n) always, sorted keys`,
+      },
+    ],
+    exercises: [
+      {
+        id: 'set-1', type: 'output', diff: 1,
+        prompt: 'What does this print?',
+        code: `int main() {
+    set<int> s;
+    s.insert(3); s.insert(1); s.insert(3); s.insert(2);
+    cout << s.size() << " " << *s.begin() << "\\n";
+}`,
+        answer: '3 1',
+        explain: 'The duplicate 3 is ignored — sets store unique values — so size is 3. Elements live in sorted order, making `*s.begin()` the minimum: 1.',
+      },
+      {
+        id: 'set-2', type: 'output', diff: 1,
+        prompt: 'The counting idiom. Output?',
+        code: `int main() {
+    map<string, int> cnt;
+    for (string w : {"a", "b", "a", "a"})
+        cnt[w]++;
+    cout << cnt["a"] << " " << cnt.size() << "\\n";
+}`,
+        answer: '3 2',
+        explain: '`cnt[w]++` creates each key at 0 on first sight, then increments: a→3, b→1. Two distinct keys → size 2. One line to count anything: the single most-used map pattern.',
+      },
+      {
+        id: 'set-3', type: 'mcq', diff: 2,
+        prompt: 'After answering the queries, `seen.size()` mysteriously **grew**. Why?',
+        code: `map<string, int> seen;   // filled earlier with known words
+while (q--) {
+    string w; cin >> w;
+    if (seen[w] > 0) cout << "known\\n";
+}
+cout << seen.size() << "\\n";   // bigger than before?!`,
+        options: [
+          '`seen[w]` default-inserts {w, 0} for every missing key — reads via operator[] mutate the map',
+          'size() includes the queries by specification',
+          'Maps grow on every read to stay balanced',
+          'The while loop copies the map each iteration',
+        ],
+        answer: 0,
+        explain: 'operator[] must return a reference, so it inserts a zeroed entry for absent keys. Every unknown query word got added. Pure lookups use `seen.count(w)` or `seen.find(w)` — `[]` is for counting and writing.',
+        hint: 'What must m[k] do when k is not in the map?',
+      },
+      {
+        id: 'set-4', type: 'mcq', diff: 2,
+        prompt: 'What does this print?',
+        code: `multiset<int> ms = {5, 5, 5, 8};
+ms.erase(5);
+cout << ms.size() << "\\n";`,
+        options: ['1 — erase(value) removes ALL copies of 5', '3 — it removes a single 5', '0 — erase clears the multiset', 'Compile error — multiset has no erase(value)'],
+        answer: 0,
+        explain: '`erase(value)` deletes **every** copy: all three 5s vanish, leaving {8}. To remove exactly one, erase an iterator: `ms.erase(ms.find(5))`. Burn this distinction in before it burns you.',
+      },
+      {
+        id: 'set-5', type: 'fill', diff: 2,
+        prompt: 'Multiset `ms` holds several copies of `x`. Remove **exactly one** copy:\n`ms.erase(___);`',
+        answer: ['ms.find(x)', 'ms.find( x )'],
+        placeholder: 'ms.…',
+        explain: '`ms.find(x)` returns an iterator to one occurrence; erasing an *iterator* removes only that element. Passing the plain value would wipe every copy.',
+      },
+      {
+        id: 'set-6', type: 'tf', diff: 2,
+        statement: 'On Codeforces rated rounds, `unordered_map` can be hacked with crafted keys that collide, degrading each operation to O(n) — so plain `map` is the safer default there.',
+        answer: true,
+        explain: 'Hash tables are O(1) only on average; adversarial inputs force worst-case O(n) per op, and CF’s hacking phase invites exactly that. `map` costs a predictable log factor; if you need hashing speed, use a randomized custom hash.',
+      },
+      {
+        id: 'set-7', type: 'output', diff: 2,
+        prompt: 'What does this print?',
+        code: `int main() {
+    set<int> s = {4, 1, 7, 1};
+    s.erase(4);
+    for (int x : s) cout << x << " ";
+}`,
+        answer: '1 7',
+        explain: 'The duplicate 1 collapses on construction → {1, 4, 7}; erasing 4 leaves {1, 7}, iterated in sorted order. Sets are simultaneously a dedupe and a sort.',
+      },
+      {
+        id: 'set-8', type: 'parsons', diff: 2,
+        prompt: 'Assemble: print the 1-based position of the **first repeated** value in the input (or -1 if all n values are distinct).',
+        lines: [
+          'set<int> seen;',
+          'int ans = -1;',
+          'for (int i = 0; i < n && ans == -1; i++) {',
+          '    int x;',
+          '    cin >> x;',
+          '    if (seen.count(x)) ans = i + 1;',
+          '    seen.insert(x);',
+          '}',
+          'cout << ans << "\\n";',
+        ],
+        distractors: [
+          '    if (seen[x]) ans = i + 1;',
+        ],
+        explain: 'Check membership **before** inserting the current value, or everything looks repeated. The distractor `seen[x]` is a bug twice over: `set` has no operator[] — that’s a map feature (and a trap even there).',
+      },
+      {
+        id: 'set-9', type: 'mcq', diff: 3,
+        prompt: '“Does some pair sum to t?” This reports YES for input `t = 10, a = {5}` — a single element. Which line is the bug?',
+        code: `set<ll> seen;
+bool found = false;
+for (int i = 0; i < n; i++) {
+    seen.insert(a[i]);              // line A
+    if (seen.count(t - a[i]))       // line B
+        found = true;
+}`,
+        options: [
+          'Line A — inserting before the check lets a[i] pair with itself when t = 2·a[i]; insert AFTER checking',
+          'Line B — count is O(n) on a set, so this is too slow',
+          'seen must be a multiset, otherwise duplicate values break the logic',
+          'found should be reset inside the loop',
+        ],
+        answer: 0,
+        explain: 'With 5 already inserted, the check `count(10 − 5)` finds the element itself. Check-then-insert means you only match *earlier* elements — which also handles genuine duplicates correctly (the second 5 finds the first). Order of operations is the whole algorithm here.',
+        hint: 'Trace i = 0: what is in `seen` when the check runs?',
+      },
+      {
+        id: 'set-10', type: 'match', diff: 1,
+        prompt: 'Match each container to its defining property.',
+        pairs: [
+          ['set', 'sorted, unique values'],
+          ['multiset', 'sorted, duplicates allowed'],
+          ['map', 'key → value, sorted by key'],
+          ['unordered_map', 'hashed: O(1) average, no order'],
+        ],
+        explain: 'The ordered three (set/multiset/map) are balanced trees: O(log n) ops, sorted iteration. unordered_map trades the ordering away for average O(1) — with the hack caveat on Codeforces.',
+      },
+      {
+        id: 'set-11', type: 'mcq', diff: 1,
+        prompt: 'Which expression is the **smallest** element of a non-empty `set<int> s`?',
+        options: ['`*s.begin()`', '`s[0]`', '`s.front()`', '`s.min()`'],
+        answer: 0,
+        explain: 'Sets iterate in sorted order, so `begin()` points at the minimum — dereference it. There is no indexing and no front() on a set (those are vector/deque APIs), and no min() member exists.',
+      },
+      {
+        id: 'set-12', type: 'code', diff: 3,
+        prompt: 'Read `n`, then `n` lowercase words. Print the word that appears **most often**; if several tie, print the alphabetically smallest of them.',
+        starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    // count with a map, then scan for the best
+
+    return 0;
+}`,
+        tests: [
+          { input: '5\nred blue red green red', expected: 'red' },
+          { input: '4\nb a b a', expected: 'a' },
+          { input: '1\nsolo', expected: 'solo' },
+        ],
+        solution: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    map<string, int> cnt;
+    for (int i = 0; i < n; i++) {
+        string w;
+        cin >> w;
+        cnt[w]++;                        // counting idiom
+    }
+    string best;
+    int bestCnt = 0;
+    for (auto& [w, c] : cnt)             // keys arrive in sorted order
+        if (c > bestCnt) {               // strict >: first (smallest) key wins ties
+            bestCnt = c;
+            best = w;
+        }
+    cout << best << "\\n";
+    return 0;
+}`,
+        explain: 'cnt[w]++ counts; then exploit that map iterates keys in **sorted order**: with a strict `>` the earliest — alphabetically smallest — key wins ties automatically. Using `>=` would hand ties to the alphabetically largest instead.',
+        hint: 'Map iteration is alphabetical. Should the comparison be > or >= to keep the FIRST best?',
+      },
+    ],
+    problems: [
+      { name: 'Sum of Two Values', platform: 'CSES', id: '1640', url: 'https://cses.fi/problemset/task/1640', difficulty: 'easy', why: 'The complement-lookup idiom: “have I seen t − x?” Mind the element pairing with itself.' },
+      { name: 'Playlist', platform: 'CSES', id: '1141', url: 'https://cses.fi/problemset/task/1141', difficulty: 'med', why: 'Set membership over a moving window — insert, detect the repeat, shrink from the left.' },
+      { name: 'Restaurant Customers', platform: 'CSES', id: '1619', url: 'https://cses.fi/problemset/task/1619', difficulty: 'med', why: 'Sort arrival/departure events, sweep while tracking occupancy — multiset or ±1 events.' },
+    ],
+  },
+
   // __MORE__
 };
