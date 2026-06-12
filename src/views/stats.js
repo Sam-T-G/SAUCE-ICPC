@@ -129,7 +129,7 @@ function xpChart(st) {
   card.innerHTML = `
     <svg class="chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="XP earned per day, last 14 days">
       <line class="grid-line" x1="${pad}" y1="${gy}" x2="${W - pad}" y2="${gy}"></line>
-      <text class="axis-label" x="${W - pad}" y="${gy - 5}" text-anchor="end">goal ${goal}</text>
+      <text class="axis-label" x="${pad + 2}" y="${gy - 5}" text-anchor="start">goal ${goal}</text>
       ${bars}
     </svg>`;
   return card;
