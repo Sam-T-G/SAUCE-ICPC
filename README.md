@@ -5,12 +5,20 @@ from `int main()` to regionals — Duolingo-style.**
 
 SAUCE started life as [`SAUCE.cpp`](SAUCE.cpp) — *Samuel's All-Purpose Ultimate
 Competitive Engine*, a single-file C++ contest handbook. It's now a full
-training platform built around that handbook: **12 units · 54 skills · 600+
-interactive exercises · a curated ladder of 150+ verified CSES/Codeforces
+training platform built around that handbook: **12 units · 54 skills · ~700
+interactive exercises · a curated ladder of 180+ verified CSES/Codeforces
 problems**, wrapped in a spaced-repetition engine and a gamification layer
 tuned for serious learners.
 
 No accounts. No backend. No build step. Clone → open → train.
+
+| The path | Lessons with elaborated feedback |
+|---|---|
+| ![learning path](docs/screenshots/path.png) | ![lesson feedback](docs/screenshots/lesson-feedback.png) |
+
+| Type-the-code drills | Mobile |
+|---|---|
+| ![typein exercise](docs/screenshots/typein.png) | ![mobile](docs/screenshots/mobile.png) |
 
 ---
 
@@ -37,7 +45,7 @@ from **Settings** or the **Team** tab.
 |---|---|
 | **Learn** | A single winding path through 12 units / 54 skills. Each skill: theory cards → interactive lessons → crown levels 0–5. One obvious "next thing to do," always. |
 | **Review** | The spaced-repetition hub. Skills decay on a forgetting curve; due reviews are interleaved across topics with the skill names hidden — recognizing the technique *is* the exercise. Plus your mistake bank and cold re-solve queue. |
-| **Problems** | 150+ curated, verified CSES/Codeforces problems mapped to each skill, ordered by difficulty, with a "why this problem" note. Tracks solo vs editorial-assisted solves — assisted ones come back in 14 days for a cold re-solve. |
+| **Problems** | 180+ curated, verified CSES/Codeforces problems mapped to each skill, ordered by difficulty, with a "why this problem" note. Tracks solo vs editorial-assisted solves — assisted ones come back in 14 days for a cold re-solve. |
 | **Handbook** | The SAUCE reference, searchable, with copy-ready snippets for your 25-page ICPC Team Reference Document — plus the interactive **"Which tool do I use?"** wizard and a C++ **playground** (remote compile via Piston). |
 | **Stats** | XP, streak, accuracy by exercise type (your weakness menu), mastery per unit, activity heatmap, badges. |
 | **Team** | No-server team features: export your progress file, import teammates', compare coverage. Commit exports to `team/` and the leaderboard works for everyone on git pull. |
@@ -45,13 +53,14 @@ from **Settings** or the **Team** tab.
 
 ### The exercise engine
 
-Ten interactive exercise types implement the research-backed learning ladder
-(*trace → assemble → complete → recall → write*):
+Eleven interactive exercise types implement the research-backed learning
+ladder (*trace → assemble → complete → typed recall → write*):
 
 multiple choice · true/false · multi-select · typed answers ·
 **predict-the-output** (tracing) · **Parsons problems** (drag/tap code into
-order) · **token-bank code completion** · matching pairs · ordering · and
-full **write-the-code exercises with a built-in judge** (compiles and runs
+order) · **token-bank code completion** · **type-into-the-code blanks**
+(typed recall, case-sensitive) · matching pairs · ordering · and full
+**write-the-code exercises with a built-in judge** (compiles and runs
 your C++ remotely, or self-check offline).
 
 Every answer — right or wrong — gets an explanation. Mistakes re-queue until

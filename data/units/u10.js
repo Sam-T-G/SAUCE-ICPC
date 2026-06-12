@@ -447,7 +447,7 @@ int main() {
       },
       {
         id: 'br-9', type: 'mcq', diff: 2,
-        prompt: 'This bridge finder reports edges that are NOT bridges (e.g. both edges of a path 1−2−3 plus back edge 3−1... it flags 1−2). The bug?',
+        prompt: 'This bridge finder reports edges that are NOT bridges — on the triangle 1−2, 2−3, 3−1 it confidently reports edge 1−2. The bug?',
         code: `dfs(v, u);
 low[u] = min(low[u], low[v]);
 if (low[v] >= tin[u])
@@ -559,5 +559,268 @@ int main() {
       { name: 'Necessary Cities', platform: 'CSES', id: '2077', url: 'https://cses.fi/problemset/task/2077', difficulty: 'med', why: 'Articulation points: the ≥ test plus the root-needs-two-children special case.' },
     ],
   },
-  // __APPEND_FLOWS__
+  // ==========================================================================
+  'flows': {
+    id: 'flows',
+    objectives: [
+      'Explain residual graphs and why reverse edges make augmenting paths correct',
+      'Use max-flow = min-cut: compute one, certify with the other, and recover the cut edges',
+      'Model problems as flow: bipartite matching, edge-disjoint paths, node capacities',
+    ],
+    theory: [
+      {
+        h: 'Networks: pipes with capacities',
+        md: 'A flow network is a directed graph with a **source** s, a **sink** t, and a capacity per edge. A flow assigns each edge an amount ≤ its capacity such that **conservation** holds: at every node except s and t, flow in = flow out. The **value** of the flow is what leaves s (equivalently, what enters t). Max flow asks for the largest possible value.\n\nRecognition cues: "maximum data/traffic/goods from A to B", "minimum roads to cut to separate two places", "pair up two groups subject to compatibility". All three are the same algorithm wearing different hats.',
+      },
+      {
+        h: 'Residual graphs: reverse edges are the undo button',
+        md: 'Repeat: find an s→t path with leftover capacity (an **augmenting path**), push the bottleneck amount, update. The residual graph stores leftover capacity — and for every unit pushed on u→v it adds a **reverse edge** v→u, meaning *"you may cancel this much"*.\n\nThe canonical why (all capacities 1): edges s→a, s→b, a→b, a→t, b→t. Greedy first path **s→a→b→t** saturates a→b and b→t — now s→b→t is blocked and you look stuck at flow 1. But the residual graph contains b→a! The path **s→b→a→t** pushes a second unit, cancelling the flow on a→b. Net result: s→a→t and s→b→t, value 2. Reverse edges let later paths repair earlier routing mistakes — that’s what makes the greedy loop *correct*, not just lucky.',
+        code: `// after pushing f units along u -> v:
+cap[u][v] -= f;     // less room forward
+cap[v][u] += f;     // ...and f units of "undo" backward`,
+      },
+      {
+        h: 'Max-flow = min-cut',
+        md: 'An **s-t cut** splits the nodes into S ∋ s and T ∋ t; its capacity is the total capacity of edges going **S→T**. Every flow must squeeze through every cut, so flow ≤ any cut — the cut is a bottleneck certificate. The duality theorem: **max flow = min cut**, exactly.\n\nWhen the augmenting loop stops, t is unreachable from s in the residual graph. Take S = nodes still reachable from s: every original S→T edge is saturated, and those edges ARE a minimum cut (Police Chase asks for exactly this list). With unit capacities, min cut = the minimum *number* of edges to delete.',
+        note: 'Recovering the cut: BFS from s **in the residual graph** after max flow, then output original edges from reachable to unreachable. "All saturated edges" is wrong — an edge can be full without being in the cut.',
+        noteKind: 'warn',
+      },
+      {
+        h: 'Dinic: levels, then blocking flow',
+        md: 'Dinic’s algorithm organizes augmentation into phases:\n\n1. **BFS** the residual graph from s, labeling each node with its level (BFS distance). If t gets no level — stop, the flow is maximum.\n2. **DFS** from s pushing flow, but only along residual edges going level u → level u+1, until the level graph is exhausted (a *blocking flow*).\n3. Rebuild levels, repeat.\n\nO(V²E) in general, O(E√V) on unit-capacity (matching) networks — at contest sizes (n ≤ 500, m ≤ a few thousand) it’s effectively instant. Edmonds-Karp (BFS per path, O(VE²)) also passes most flow problems at these sizes and is shorter to write.',
+        code: `// the only move DFS may make in a Dinic phase:
+if (level[v] == level[u] + 1 && cap[u][v] > 0) { ... }`,
+      },
+      {
+        h: 'Bipartite matching is unit-capacity flow',
+        md: 'Max matching (School Dance: pair boys with girls, each person once): build source→every left node with capacity **1**, keep the original left→right edges with capacity 1, every right node→sink with capacity **1**. Then **max flow = max matching**: the unit source edge stops a left node from being matched twice, the unit sink edge does the same on the right, and integrality (augmenting paths push whole units when capacities are integers) guarantees the flow IS a set of pairs — never half a dancer. The matched pairs are the left→right edges carrying flow.',
+        code: `int S = 0, T = n + m + 1;
+for (int u = 1; u <= n; u++) addEdge(S, u, 1);       // source -> left
+for (int v = 1; v <= m; v++) addEdge(n + v, T, 1);   // right -> sink
+// compatible pair (u, v):
+addEdge(u, n + v, 1);                                 // left -> right`,
+      },
+      {
+        h: 'Modeling toolbox & traps',
+        md: 'Flow is a modeling language:\n\n• **Edge-disjoint s→t paths** = max flow with every capacity 1 (each edge used once). Download Speed is the plain version: real capacities, just compute the flow.\n• **Node capacity / node-disjoint** = split v into v_in → v_out with an edge of capacity 1 (or the node’s limit); all in-edges enter v_in, all out-edges leave v_out.\n• **Undirected edge** = two directed edges, one each way.\n\nTraps: the flow value can overflow — capacities up to 10⁹ over 1000 edges is 10¹² → **long long**. And always add the reverse (capacity-0) edge when building adjacency-list residual graphs; forgetting it quietly computes the greedy flow, not the max flow.',
+        noteKind: 'danger',
+        note: 'DFS-based Ford-Fulkerson runs O(E · flowValue) in the worst case — with capacities near 10⁹ that can mean billions of augmentations. Use BFS paths (Edmonds-Karp) or Dinic.',
+      },
+    ],
+    exercises: [
+      {
+        id: 'fl-1', type: 'mcq', diff: 1,
+        prompt: 'In a valid flow, what must hold at every node other than the source and the sink?',
+        options: [
+          'Total flow entering the node equals total flow leaving it',
+          'Flow through the node is at most 1',
+          'The node lies on at most one augmenting path',
+          'At least one incident edge is saturated',
+        ],
+        answer: 0,
+        explain: 'Conservation: intermediate nodes neither create nor swallow flow — pipes pass water through. Only s (net producer) and t (net consumer) are exempt. Everything else about flows is built on this one constraint plus the capacity limits.',
+      },
+      {
+        id: 'fl-2', type: 'fill', diff: 1,
+        prompt: 'Network: s→a (cap 3), a→t (cap 2), s→b (cap 1), b→t (cap 2). What is the max flow from s to t?',
+        answer: '3',
+        explain: 'Each path is limited by its bottleneck: s→a→t carries min(3,2) = 2, s→b→t carries min(1,2) = 1. The paths share no edges, so the flows add: 3. Certificate: the cut {s, a} | {b, t} cuts edges a→t (2) and s→b (1), capacity 3 — flow meets cut, so both are optimal.',
+      },
+      {
+        id: 'fl-3', type: 'output', diff: 2,
+        prompt: 'A greedy "max flow" with NO reverse edges, on the classic trap network (all capacities 1). What does it print?',
+        code: `int main() {
+    // s=0, a=1, b=2, t=3 — all capacities 1
+    int cap[4][4] = {};
+    cap[0][1] = cap[0][2] = 1;     // s->a, s->b
+    cap[1][3] = cap[2][3] = 1;     // a->t, b->t
+    cap[1][2] = 1;                 // a->b, the tempting shortcut
+    int flow = 0;
+    // greedy path 1: s -> a -> b -> t
+    cap[0][1]--; cap[1][2]--; cap[2][3]--;
+    flow++;
+    // try the remaining option: s -> b -> t
+    if (cap[0][2] > 0 && cap[2][3] > 0) flow++;
+    cout << flow << "\\n";
+}`,
+        answer: '1',
+        explain: 'The first path burned b→t, so s→b→t finds cap[2][3] == 0 and the greedy stops at 1 — but the true max flow is 2. Without reverse edges there is no way to un-route the a→b decision. This network is the entire argument for residual graphs; the next exercise shows the fix.',
+        hint: 'After path 1, what is cap[2][3]?',
+      },
+      {
+        id: 'fl-4', type: 'mcq', diff: 2,
+        prompt: 'Same network (all caps 1: s→a, s→b, a→b, a→t, b→t), and the first augmenting path was s→a→b→t. In the **residual graph**, which path completes the max flow of 2?',
+        options: [
+          's→b→a→t — it uses the reverse edge b→a to cancel the flow on a→b',
+          's→b→t — b→t still has spare capacity',
+          's→a→t — a→t is untouched, and so is s→a',
+          'None — after a bad first path the algorithm is permanently stuck at 1',
+        ],
+        answer: 0,
+        explain: 'Pushing on a→b created residual edge b→a ("cancel me"). The path s→b→(b→a)→a→t pushes 1 unit: a→b nets to zero and the final flow is the two straight paths s→a→t, s→b→t. Options 2 and 3 use saturated edges, and option 4 is exactly the misconception reverse edges exist to kill.',
+        hint: 'What residual edge appeared when a→b received flow?',
+      },
+      {
+        id: 'fl-5', type: 'fill', diff: 2,
+        prompt: 'Hand-compute: nodes s, a, b, t. Edges: s→a (4), s→b (2), a→b (1), a→t (2), b→t (3). Max flow from s to t?',
+        answer: '5',
+        explain: 'Push s→a→t (2), s→b→t (2), then s→a→b→t (1): total 5. Certificate: the cut {s, a, b} | {t} has capacity a→t + b→t = 2 + 3 = 5. When your flow equals some cut, both are optimal — that equality is the everyday way to *prove* you’re done.',
+        hint: 'a→t caps out at 2 — can a’s leftover supply reach t another way?',
+      },
+      {
+        id: 'fl-6', type: 'fill', diff: 2,
+        prompt: 'Police Chase: every road has capacity 1, and your max flow from node 1 to node n comes out as 4. How many roads does the minimum cut contain?',
+        answer: '4',
+        explain: 'Max-flow = min-cut, and with unit capacities a cut’s capacity IS its edge count — so exactly 4 roads. That number is free; the actual work in Police Chase is listing which roads: residual reachability from s, then edges crossing the frontier.',
+      },
+      {
+        id: 'fl-7', type: 'order', diff: 2,
+        prompt: 'Order one full run of Dinic’s algorithm.',
+        items: [
+          'BFS from s in the residual graph, assigning each node a level',
+          'If t received no level, stop — the current flow is maximum',
+          'DFS from s, pushing flow only along edges from level u to level u+1',
+          'When the level graph is exhausted (blocking flow found), go back and rebuild levels',
+        ],
+        explain: 'Phase = BFS levels → check for t → DFS blocking flow → repeat. Restricting DFS to level+1 edges forces shortest augmenting paths, which is what bounds the number of phases (≤ n) and makes Dinic fast in practice.',
+      },
+      {
+        id: 'fl-8', type: 'bank', diff: 2,
+        prompt: 'School Dance: n boys (left), m girls (right), k compatible pairs. Complete the matching network.',
+        code: `int S = 0, T = n + m + 1;             // girls live at nodes n+1..n+m
+for (int u = 1; u <= n; u++)
+    addEdge(___, u, ___);             // feed each boy
+for (int v = 1; v <= m; v++)
+    addEdge(n + v, ___, 1);           // each girl drains out
+for (auto [u, v] : pairs)             // boy u likes girl v
+    addEdge(u, ___ + v, 1);`,
+        answer: ['S', '1', 'T', 'n'],
+        distractors: ['INF', '0'],
+        explain: 'Source→boy with capacity 1 is the whole trick — INF there would let one boy dance with several girls. Girls drain to the sink (cap 1, same reason), and pair edges target n+v: forgetting the offset wires boy u to boy v. Max flow = max matching, pairs = left→right edges with flow.',
+      },
+      {
+        id: 'fl-9', type: 'mcq', diff: 3,
+        prompt: 'You ran max flow for Police Chase and now must OUTPUT the min-cut edges. Which procedure is correct?',
+        options: [
+          'BFS from s in the final residual graph; output original edges leading from a reachable node to an unreachable one',
+          'Output every saturated edge (flow = capacity)',
+          'Output the edges of the last augmenting path you found',
+          'Output the maxflow many edges with smallest capacity',
+        ],
+        answer: 0,
+        explain: 'S = residual-reachable from s defines the cut; its crossing edges are the answer. "All saturated edges" overshoots: in the unit-cap diamond s→a→t, s→b→t, max flow 2 saturates all FOUR edges, but the min cut is just the two source edges (or the two sink edges). Police Chase expects exactly maxflow-many edges — saturation is necessary for cut membership, not sufficient.',
+        hint: 'Can an edge be full yet still have its endpoints connected around it in the residual graph?',
+      },
+      {
+        id: 'fl-10', type: 'match', diff: 2,
+        prompt: 'Match each modeling situation to its flow gadget.',
+        pairs: [
+          ['k edge-disjoint s→t paths?', 'max flow with every edge capacity 1'],
+          ['pair up two groups', 'unit-cap source/left/right/sink network'],
+          ['a vertex usable only once', 'split it: v_in → v_out with capacity 1'],
+          ['undirected pipe', 'two directed edges, one per direction'],
+          ['fewest edges disconnecting s from t', 'min cut — numerically equal to max flow'],
+        ],
+        explain: 'Flow problems are rarely labeled "flow" — they arrive dressed as paths, pairings, and sabotage. The gadgets are the vocabulary: unit caps for disjointness, node splitting for vertex limits, duality for destruction questions.',
+      },
+      {
+        id: 'fl-11', type: 'tf', diff: 2,
+        statement: 'If every capacity is an integer, there is always a maximum flow in which every edge carries an integer amount — and augmenting-path algorithms find one.',
+        answer: true,
+        explain: 'Integrality theorem: every augmentation pushes an integer bottleneck, so flows stay integral all the way to optimal. This is why matching-as-flow is sound — the answer decomposes into whole unit paths (pairs), never fractional dancers.',
+      },
+      {
+        id: 'fl-12', type: 'mcq', diff: 3,
+        prompt: 'Download Speed: n ≤ 500, m ≤ 1000, capacities up to 10⁹. Pick the approach that actually gets AC.',
+        options: [
+          'Dinic (or Edmonds-Karp) with the flow total in a long long — the answer can reach ~10¹²',
+          'DFS-based Ford-Fulkerson — m is small, so it is fast',
+          'Hopcroft-Karp, since the graph is small enough to treat as bipartite',
+          'Compute a min cut instead, which needs a separate algorithm',
+        ],
+        answer: 0,
+        explain: 'Two traps in one: DFS Ford-Fulkerson augments O(flowValue) times — with caps near 10⁹ that can be billions of iterations (the classic zigzag network does exactly this) — and 1000 edges × 10⁹ overflows int. Dinic’s phase structure ignores the capacity magnitude; min cut needs no separate algorithm, it falls out of max flow.',
+        hint: 'How many augmenting paths might "push 1 unit each time" take when capacities are 10⁹?',
+      },
+      {
+        id: 'fl-13', type: 'code', diff: 3,
+        prompt: 'Max flow from node 1 to node n (Download Speed shape). Input: `n m`, then m directed edges `a b c` (capacity c). Output the max flow. Tiny limits: n ≤ 50, m ≤ 100, c ≤ 10⁹ — but mind the total!',
+        starter: `#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int n, m;
+    cin >> n >> m;
+    vector<vector<ll>> cap(n + 1, vector<ll>(n + 1, 0));
+    vector<vector<int>> g(n + 1);
+    for (int i = 0; i < m; i++) {
+        int a, b; ll c;
+        cin >> a >> b >> c;
+        cap[a][b] += c;             // capacity matrix handles duplicates
+        g[a].push_back(b);
+        g[b].push_back(a);          // residual direction too!
+    }
+    // BFS augmenting paths (Edmonds-Karp) until t is unreachable
+
+    return 0;
+}`,
+        tests: [
+          { input: '4 5\n1 2 1\n1 3 1\n2 3 1\n2 4 1\n3 4 1', expected: '2' },
+          { input: '4 5\n1 2 4\n1 3 2\n2 3 1\n2 4 2\n3 4 3', expected: '5' },
+          { input: '3 2\n1 2 1000000000\n2 3 1000000000', expected: '1000000000' },
+        ],
+        solution: `#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int n, m;
+    cin >> n >> m;
+    vector<vector<ll>> cap(n + 1, vector<ll>(n + 1, 0));
+    vector<vector<int>> g(n + 1);
+    for (int i = 0; i < m; i++) {
+        int a, b; ll c;
+        cin >> a >> b >> c;
+        cap[a][b] += c;
+        g[a].push_back(b);
+        g[b].push_back(a);              // allow travel along reverse edges
+    }
+    ll flow = 0;
+    while (true) {
+        vector<int> par(n + 1, 0);      // BFS parents; 0 = unvisited
+        par[1] = 1;
+        queue<int> q;
+        q.push(1);
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            for (int v : g[u])
+                if (!par[v] && cap[u][v] > 0) { par[v] = u; q.push(v); }
+        }
+        if (!par[n]) break;             // sink unreachable: done
+        ll push = LLONG_MAX;            // bottleneck on the path
+        for (int v = n; v != 1; v = par[v]) push = min(push, cap[par[v]][v]);
+        for (int v = n; v != 1; v = par[v]) {
+            cap[par[v]][v] -= push;     // spend forward capacity
+            cap[v][par[v]] += push;     // grant the undo
+        }
+        flow += push;
+    }
+    cout << flow << "\\n";
+    return 0;
+}`,
+        explain: 'Edmonds-Karp: BFS a shortest residual path, push its bottleneck, repeat until the sink is unreachable. Test 1 is the reroute network from this lesson (answer 2 requires the reverse edge); test 3 fails with int — the flow itself is 10⁹ and sums can go far beyond.',
+        hint: 'Walk the BFS parents back from n for the bottleneck, then again to update cap[u][v] AND cap[v][u].',
+      },
+    ],
+    problems: [
+      { name: 'Download Speed', platform: 'CSES', id: '1694', url: 'https://cses.fi/problemset/task/1694', difficulty: 'med', why: 'Plain max flow with capacities up to 10⁹ — augmenting paths done right, and a long long answer.' },
+      { name: 'School Dance', platform: 'CSES', id: '1696', url: 'https://cses.fi/problemset/task/1696', difficulty: 'med', why: 'Bipartite matching via the unit-capacity reduction — and you must print the matched pairs, not just count them.' },
+      { name: 'Police Chase', platform: 'CSES', id: '1695', url: 'https://cses.fi/problemset/task/1695', difficulty: 'hard', why: 'Min cut with edge recovery: max flow, residual reachability from s, output the crossing edges.' },
+    ],
+  },
 };
