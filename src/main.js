@@ -171,3 +171,8 @@ if (!getState().onboarded) {
 } else {
   route();
 }
+
+// offline support (no-op on file:// or unsupported browsers)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
