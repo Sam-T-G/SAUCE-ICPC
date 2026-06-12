@@ -34,10 +34,10 @@ python3 -m http.server 8000        # or: npx serve, or any static server
 That's it. Progress saves to your browser (localStorage); export/import it
 from **Settings** or the **Team** tab.
 
-> **GitHub Pages**: enable Pages for the repo (Settings → Pages → Deploy from
-> branch → `main`, root) and the whole app is hosted at
-> `https://<you>.github.io/SAUCE-ICPC/` — one URL for the whole team. A
-> ready-made workflow lives in `.github/workflows/pages.yml`.
+> **Live site**: https://sam-t-g.github.io/SAUCE-ICPC/ — one URL for the
+> whole team. Every push to `main` runs the test suite and, when green,
+> publishes automatically (`.github/workflows/pages.yml` mirrors `main` to
+> the `gh-pages` branch that Pages serves).
 
 ## 🗺️ What's inside
 

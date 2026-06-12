@@ -1,14 +1,20 @@
 name: Deploy to GitHub Pages
 
+# Pages is enabled in "deploy from branch" mode, serving the gh-pages branch.
+# This workflow gates deployment behind the test suite: every push to main
+# runs engine tests + full content validation (compiling all code exercises),
+# and only then mirrors main to gh-pages, which GitHub publishes.
+#
+# (If you later switch Settings → Pages → Source to "GitHub Actions", replace
+# the deploy job with the actions/configure-pages + deploy-pages flow.)
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -30,16 +36,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish main to gh-pages
+        run: git push origin HEAD:gh-pages --force
