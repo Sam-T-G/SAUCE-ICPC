@@ -5,9 +5,9 @@ from `int main()` to regionals — Duolingo-style.**
 
 SAUCE started life as [`SAUCE.cpp`](SAUCE.cpp) — *Samuel's All-Purpose Ultimate
 Competitive Engine*, a single-file C++ contest handbook. It's now a full
-training platform built around that handbook: **12 units · 54 skills · ~700
-interactive exercises · a curated ladder of 180+ verified CSES/Codeforces
-problems**, wrapped in a spaced-repetition engine and a gamification layer
+training platform built around that handbook: **12 units · 54 skills · 694
+interactive exercises · a curated ladder of 168 verified CSES/Codeforces
+problems (184 placements across skills)**, wrapped in a spaced-repetition engine and a gamification layer
 tuned for serious learners.
 
 No accounts. No backend. No build step. Clone → open → train.
@@ -45,7 +45,7 @@ from **Settings** or the **Team** tab.
 |---|---|
 | **Learn** | A single winding path through 12 units / 54 skills. Each skill: theory cards → interactive lessons → crown levels 0–5. One obvious "next thing to do," always. |
 | **Review** | The spaced-repetition hub. Skills decay on a forgetting curve; due reviews are interleaved across topics with the skill names hidden — recognizing the technique *is* the exercise. Plus your mistake bank and cold re-solve queue. |
-| **Problems** | 180+ curated, verified CSES/Codeforces problems mapped to each skill, ordered by difficulty, with a "why this problem" note. Tracks solo vs editorial-assisted solves — assisted ones come back in 14 days for a cold re-solve. |
+| **Problems** | 168 curated, verified CSES/Codeforces problems mapped to each skill, ordered by difficulty, with a "why this problem" note. Tracks solo vs editorial-assisted solves — assisted ones come back in 14 days for a cold re-solve. |
 | **Handbook** | The SAUCE reference, searchable, with copy-ready snippets for your 25-page ICPC Team Reference Document — plus the interactive **"Which tool do I use?"** wizard and a C++ **playground** (remote compile via Piston). |
 | **Stats** | XP, streak, accuracy by exercise type (your weakness menu), mastery per unit, activity heatmap, badges. |
 | **Team** | No-server team features: export your progress file, import teammates', compare coverage. Commit exports to `team/` and the leaderboard works for everyone on git pull. |
@@ -144,6 +144,20 @@ node tests/validate-content.js     # schema-validates ALL content; compiles
 Want to add a lesson, fix an explanation, or extend the curriculum? See
 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and
 [docs/CONTENT_SPEC.md](docs/CONTENT_SPEC.md).
+
+## 📖 Documentation
+
+| Doc | What's in it |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, state model, the lesson data-flow, extension points |
+| [docs/PEDAGOGY.md](docs/PEDAGOGY.md) | The research behind every mechanic — citations + honest caveats |
+| [docs/CURRICULUM.md](docs/CURRICULUM.md) | Skill-by-skill syllabus, source synthesis, what's beyond |
+| [docs/CONTENT_SPEC.md](docs/CONTENT_SPEC.md) | Exercise schema + quality bar for authors |
+| [docs/TESTING.md](docs/TESTING.md) | The 4 test layers and how to run/extend them |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Pages publishing, the runner dependency, team ops |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | How to add a lesson, type, or feature |
+| [docs/AUDIT.md](docs/AUDIT.md) | Verified status snapshot (counts, test results) |
+| [CLAUDE.md](CLAUDE.md) | Orientation for AI coding sessions |
 
 ## 📜 License
 
